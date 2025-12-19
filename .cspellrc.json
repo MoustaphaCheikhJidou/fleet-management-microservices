@@ -14,7 +14,11 @@
     "jdbc",
     "kafka",
     "rabbitmq",
-    "eureka"
+    "eureka",
+    "starter",
+    "maven",
+    "jsonwebtoken",
+    "jjwt"
   ],
   "ignoreWords": [],
   "ignorePaths": [
