@@ -126,7 +126,7 @@ logging:
 
 authorization:
   jwt:
-    secret: ${JWT_SECRET:WriteHereYourSecretStringForTokenSigningCredentials}
+    secret: ${JWT_SECRET:ChangeThisToA32CharOrMoreSecretValue_1234567890}
   routes:
     public-paths: /api/v1/authentication/**,/api/v1/carriers/sign-up,/actuator/**,/v3/api-docs/**,/swagger-ui/**
 

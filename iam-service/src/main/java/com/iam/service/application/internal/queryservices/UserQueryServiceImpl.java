@@ -39,7 +39,8 @@ public class UserQueryServiceImpl implements UserQueryService {
     // inherited javadoc
     @Override
     public Optional<User> handle(GetUserByIdQuery query) {
-        return userRepository.findById(query.userId());
+        if (query.userId() == null) return Optional.empty();
+        return userRepository.findById(java.util.Objects.requireNonNull(query.userId(), "userId must not be null"));
     }
 
     // inherited javadoc

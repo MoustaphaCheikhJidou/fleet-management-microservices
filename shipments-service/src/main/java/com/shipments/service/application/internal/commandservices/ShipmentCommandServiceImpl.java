@@ -57,17 +57,18 @@ public class ShipmentCommandServiceImpl implements ShipmentCommandService {
      */
     @Override
     public Optional<Shipment> handle(Long shipmentId, UpdateShipmentCommand command) {
-        return shipmentRepository.findById(shipmentId)
-                .map(shipment -> {
-                    if (command.destination() != null) {shipment.setDestination(command.destination());}
-                    if (command.description() != null) {shipment.setDescription(command.description());}
-                    if (command.scheduledDate() != null) {shipment.setScheduledDate(command.scheduledDate());}
-                    if (command.customerName() != null) {shipment.setCustomerName(command.customerName());}
-                    if (command.customerPhone() != null) {shipment.setCustomerPhone(command.customerPhone());}
+        if (shipmentId == null) return Optional.empty();
+        return shipmentRepository.findById(java.util.Objects.requireNonNull(shipmentId, "shipmentId must not be null"))
+            .map(shipment -> {
+                if (command.destination() != null) {shipment.setDestination(command.destination());}
+                if (command.description() != null) {shipment.setDescription(command.description());}
+                if (command.scheduledDate() != null) {shipment.setScheduledDate(command.scheduledDate());}
+                if (command.customerName() != null) {shipment.setCustomerName(command.customerName());}
+                if (command.customerPhone() != null) {shipment.setCustomerPhone(command.customerPhone());}
 
-                    var updatedShipment = shipmentRepository.save(shipment);
+                    var updatedShipment = shipmentRepository.save(java.util.Objects.requireNonNull(shipment, "shipment must not be null"));
 
-                    // Publicar evento de envío actualizado
+                // Publicar evento de envío actualizado
                     var event = new ShipmentUpdatedEvent(
                         updatedShipment.getId(),
                         command.destination(),
@@ -92,10 +93,11 @@ public class ShipmentCommandServiceImpl implements ShipmentCommandService {
      */
     @Override
     public Optional<Shipment> assignCarrier(Long shipmentId, Long carrierId) {
-        return shipmentRepository.findById(shipmentId)
-                .map(shipment -> {
-                    shipment.assignCarrier(carrierId);
-                    var updatedShipment = shipmentRepository.save(shipment);
+        if (shipmentId == null) return Optional.empty();
+        return shipmentRepository.findById(java.util.Objects.requireNonNull(shipmentId, "shipmentId must not be null"))
+            .map(shipment -> {
+                shipment.assignCarrier(carrierId);
+                var updatedShipment = shipmentRepository.save(java.util.Objects.requireNonNull(shipment, "shipment must not be null"));
 
                     // Publicar evento de envío actualizado con asignación de transportista
                     var event = new ShipmentUpdatedEvent(
@@ -121,10 +123,11 @@ public class ShipmentCommandServiceImpl implements ShipmentCommandService {
      */
     @Override
     public Optional<Shipment> removeCarrier(Long shipmentId) {
-        return shipmentRepository.findById(shipmentId)
-                .map(shipment -> {
-                    shipment.removeCarrier();
-                    var updatedShipment = shipmentRepository.save(shipment);
+        if (shipmentId == null) return Optional.empty();
+        return shipmentRepository.findById(java.util.Objects.requireNonNull(shipmentId, "shipmentId must not be null"))
+            .map(shipment -> {
+                shipment.removeCarrier();
+                var updatedShipment = shipmentRepository.save(java.util.Objects.requireNonNull(shipment, "shipment must not be null"));
 
                     // Publicar evento de envío actualizado con eliminación de transportista
                     var event = new ShipmentUpdatedEvent(
@@ -151,10 +154,11 @@ public class ShipmentCommandServiceImpl implements ShipmentCommandService {
      */
     @Override
     public Optional<Shipment> updateStatus(Long shipmentId, ShipmentStatus status) {
-        return shipmentRepository.findById(shipmentId)
-                .map(shipment -> {
-                    shipment.changeStatus(status);
-                    var updatedShipment = shipmentRepository.save(shipment);
+        if (shipmentId == null) return Optional.empty();
+        return shipmentRepository.findById(java.util.Objects.requireNonNull(shipmentId, "shipmentId must not be null"))
+            .map(shipment -> {
+                shipment.changeStatus(status);
+                var updatedShipment = shipmentRepository.save(java.util.Objects.requireNonNull(shipment, "shipment must not be null"));
 
                     // Publicar evento de envío actualizado con cambio de estado
                     var event = new ShipmentUpdatedEvent(
@@ -180,10 +184,11 @@ public class ShipmentCommandServiceImpl implements ShipmentCommandService {
      */
     @Override
     public Optional<Shipment> startShipment(Long shipmentId) {
-        return shipmentRepository.findById(shipmentId)
-                .map(shipment -> {
-                    shipment.startShipment();
-                    var updatedShipment = shipmentRepository.save(shipment);
+        if (shipmentId == null) return Optional.empty();
+        return shipmentRepository.findById(java.util.Objects.requireNonNull(shipmentId, "shipmentId must not be null"))
+            .map(shipment -> {
+                shipment.startShipment();
+                var updatedShipment = shipmentRepository.save(java.util.Objects.requireNonNull(shipment, "shipment must not be null"));
 
                     // Publicar evento de envío actualizado con cambio de estado a EN_PROGRESO
                     var event = new ShipmentUpdatedEvent(
@@ -209,10 +214,11 @@ public class ShipmentCommandServiceImpl implements ShipmentCommandService {
      */
     @Override
     public Optional<Shipment> completeShipment(Long shipmentId) {
-        return shipmentRepository.findById(shipmentId)
-                .map(shipment -> {
-                    shipment.completeShipment();
-                    var updatedShipment = shipmentRepository.save(shipment);
+        if (shipmentId == null) return Optional.empty();
+        return shipmentRepository.findById(java.util.Objects.requireNonNull(shipmentId, "shipmentId must not be null"))
+            .map(shipment -> {
+                shipment.completeShipment();
+                var updatedShipment = shipmentRepository.save(java.util.Objects.requireNonNull(shipment, "shipment must not be null"));
 
                     // Publicar evento de envío actualizado con cambio de estado a COMPLETADO
                     var event = new ShipmentUpdatedEvent(
@@ -238,10 +244,11 @@ public class ShipmentCommandServiceImpl implements ShipmentCommandService {
      */
     @Override
     public Optional<Shipment> cancelShipment(Long shipmentId) {
-        return shipmentRepository.findById(shipmentId)
-                .map(shipment -> {
-                    shipment.cancelShipment();
-                    var updatedShipment = shipmentRepository.save(shipment);
+        if (shipmentId == null) return Optional.empty();
+        return shipmentRepository.findById(java.util.Objects.requireNonNull(shipmentId, "shipmentId must not be null"))
+            .map(shipment -> {
+                shipment.cancelShipment();
+                var updatedShipment = shipmentRepository.save(java.util.Objects.requireNonNull(shipment, "shipment must not be null"));
 
                     // Publicar evento de envío actualizado con cambio de estado a CANCELADO
                     var event = new ShipmentUpdatedEvent(
@@ -262,8 +269,9 @@ public class ShipmentCommandServiceImpl implements ShipmentCommandService {
 
     @Override
     public boolean deleteShipment(Long shipmentId) {
-        if (shipmentRepository.existsById(shipmentId)) {
-            shipmentRepository.deleteById(shipmentId);
+        if (shipmentId == null) return false;
+        if (shipmentRepository.existsById(java.util.Objects.requireNonNull(shipmentId, "shipmentId must not be null"))) {
+            shipmentRepository.deleteById(java.util.Objects.requireNonNull(shipmentId, "shipmentId must not be null"));
             return true;
         }
         return false;

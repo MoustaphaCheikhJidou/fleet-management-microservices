@@ -28,7 +28,8 @@ public class VehicleQueryServiceImpl implements VehicleQueryService {
      */
     @Override
     public Optional<Vehicle> handle(GetVehicleByIdQuery query) {
-        return vehicleRepository.findById(query.vehicleId());
+        if (query.vehicleId() == null) return Optional.empty();
+        return vehicleRepository.findById(java.util.Objects.requireNonNull(query.vehicleId(), "vehicleId must not be null"));
     }
 
     /**

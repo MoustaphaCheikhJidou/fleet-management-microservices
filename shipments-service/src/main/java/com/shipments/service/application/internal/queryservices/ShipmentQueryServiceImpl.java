@@ -27,7 +27,8 @@ public class ShipmentQueryServiceImpl implements ShipmentQueryService {
      */
     @Override
     public Optional<Shipment> handle(GetShipmentByIdQuery query) {
-        return shipmentRepository.findById(query.shipmentId());
+        if (query.shipmentId() == null) return Optional.empty();
+        return shipmentRepository.findById(java.util.Objects.requireNonNull(query.shipmentId(), "shipmentId must not be null"));
     }
 
     /**

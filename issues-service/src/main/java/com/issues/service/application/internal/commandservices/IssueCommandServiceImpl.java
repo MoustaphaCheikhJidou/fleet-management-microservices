@@ -46,12 +46,13 @@ public class IssueCommandServiceImpl implements IssueCommandService {
 
     @Override
     public Optional<Issue> handle(Long issueId, UpdateIssueCommand command) {
-        return issueRepository.findById(issueId)
-                .map(issue -> {
-                    if (command.title() != null) { issue.updateTitle(command.title()); }
-                    if (command.content() != null) { issue.updateContent(command.content()); }
-                    if (command.type() != null) { issue.updateType(command.type()); }
-                    var updatedIssue = issueRepository.save(issue);
+        if (issueId == null) return Optional.empty();
+        return issueRepository.findById(java.util.Objects.requireNonNull(issueId, "issueId must not be null"))
+            .map(issue -> {
+                if (command.title() != null) { issue.updateTitle(command.title()); }
+                if (command.content() != null) { issue.updateContent(command.content()); }
+                if (command.type() != null) { issue.updateType(command.type()); }
+                var updatedIssue = issueRepository.save(java.util.Objects.requireNonNull(issue, "issue must not be null"));
 
                     // Publicar evento de incidencia actualizada
                     var event = new IssueUpdatedEvent(
@@ -68,9 +69,10 @@ public class IssueCommandServiceImpl implements IssueCommandService {
 
     @Override
     public boolean deleteIssue(Long issueId){
-        if (!issueRepository.existsById(issueId)) { return false; }
+        if (issueId == null) return false;
+        if (!issueRepository.existsById(java.util.Objects.requireNonNull(issueId, "issueId must not be null"))) { return false; }
         try {
-            issueRepository.deleteById(issueId);
+            issueRepository.deleteById(java.util.Objects.requireNonNull(issueId, "issueId must not be null"));
             return true;
         } catch (Exception e) {
             // Log the exception if necessary

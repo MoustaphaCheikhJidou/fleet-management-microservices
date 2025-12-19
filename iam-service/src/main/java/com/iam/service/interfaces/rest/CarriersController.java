@@ -2,7 +2,7 @@ package com.iam.service.interfaces.rest;
 
 import com.iam.service.domain.services.UserCommandService;
 import com.iam.service.interfaces.rest.resources.RegisterCarrierResource;
-import com.iam.service.interfaces.rest.resources.UserResource;
+// ...existing code...
 import com.iam.service.interfaces.rest.transform.RegisterCarrierCommandFromResourceAssembler;
 import com.iam.service.interfaces.rest.transform.UserResourceFromEntityAssembler;
 import io.swagger.v3.oas.annotations.Operation;

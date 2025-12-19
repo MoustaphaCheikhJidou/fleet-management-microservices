@@ -36,7 +36,7 @@ public class ProfileCommandServiceImpl implements ProfileCommandService {
             profile.updateName(firstName, lastName);
         }
         if (command.phoneNumber() != null) { profile.updatePhoneNumber(command.phoneNumber()); }
-        var updatedProfile = userProfileRepository.save(profile);
+        var updatedProfile = userProfileRepository.save(java.util.Objects.requireNonNull(profile, "profile must not be null"));
         return Optional.of(updatedProfile);
     }
 }

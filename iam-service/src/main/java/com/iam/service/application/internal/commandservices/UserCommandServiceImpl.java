@@ -88,7 +88,7 @@ public class UserCommandServiceImpl implements UserCommandService {
 
     @Override
     public Optional<User> handle(ChangePasswordCommand command) {
-        var userOptional = userRepository.findById(command.userId());
+        var userOptional = userRepository.findById(java.util.Objects.requireNonNull(command.userId(), "userId must not be null"));
         if (userOptional.isEmpty()) { throw new RuntimeException("User not found with ID: " + command.userId());}
         var user = userOptional.get();
         if (!hashingService.matches(command.currentPassword(), user.getPassword())) { throw new RuntimeException("Current password is incorrect"); }
@@ -99,7 +99,7 @@ public class UserCommandServiceImpl implements UserCommandService {
 
     @Override
     public Optional<User> handle(ChangeEmailCommand command) {
-        var userOptional = userRepository.findById(command.userId());
+        var userOptional = userRepository.findById(java.util.Objects.requireNonNull(command.userId(), "userId must not be null"));
         if (userOptional.isEmpty()) { throw new RuntimeException("User not found with ID: " + command.userId()); }
         var user = userOptional.get();
         if (!hashingService.matches(command.password(), user.getPassword())) { throw new RuntimeException("Password is incorrect"); }
@@ -112,14 +112,18 @@ public class UserCommandServiceImpl implements UserCommandService {
     @Override
     public boolean deleteUser(Long userId) {
         log.info("Attempting to delete user with ID: {}", userId);
-        var userOptional = userRepository.findById(userId);
+        if (userId == null) {
+            log.warn("Failed to delete user: User ID is null");
+            return false;
+        }
+        var userOptional = userRepository.findById(java.util.Objects.requireNonNull(userId, "userId must not be null"));
         if (userOptional.isEmpty()) {
             log.warn("Failed to delete user: User with ID {} not found", userId);
             return false;
         }
 
         try {
-            userRepository.deleteById(userId);
+            userRepository.deleteById(java.util.Objects.requireNonNull(userId, "userId must not be null"));
             log.info("User with ID: {} deleted successfully", userId);
             return true;
         } catch (Exception e) {

@@ -57,11 +57,12 @@ public class VehicleCommandServiceImpl implements VehicleCommandService {
      */
     @Override
     public Optional<Vehicle> handle(Long vehicleId, UpdateVehicleCommand command) {
-        return vehicleRepository.findById(vehicleId)
-                .map(vehicle -> {
-                    if (command.brand() != null) { vehicle.setBrand(command.brand()); }
-                    if (command.model() != null) { vehicle.setModel(command.model()); }
-                    var updatedVehicle = vehicleRepository.save(vehicle);
+        if (vehicleId == null) return Optional.empty();
+        return vehicleRepository.findById(java.util.Objects.requireNonNull(vehicleId, "vehicleId must not be null"))
+            .map(vehicle -> {
+                if (command.brand() != null) { vehicle.setBrand(command.brand()); }
+                if (command.model() != null) { vehicle.setModel(command.model()); }
+                var updatedVehicle = vehicleRepository.save(java.util.Objects.requireNonNull(vehicle, "vehicle must not be null"));
 
                     // Publicar evento de vehículo actualizado
                     var event = new VehicleUpdatedEvent(
@@ -87,10 +88,11 @@ public class VehicleCommandServiceImpl implements VehicleCommandService {
     @Override
     public Optional<Vehicle> handle(Long vehicleId, Long carrierId) {
         if (vehicleRepository.findByCarrierId(carrierId).isPresent()) { return Optional.empty(); }
-        return vehicleRepository.findById(vehicleId)
-                .map(vehicle -> {
-                    vehicle.assignCarrier(carrierId);
-                    var updatedVehicle = vehicleRepository.save(vehicle);
+        if (vehicleId == null) return Optional.empty();
+        return vehicleRepository.findById(java.util.Objects.requireNonNull(vehicleId, "vehicleId must not be null"))
+            .map(vehicle -> {
+                vehicle.assignCarrier(carrierId);
+                var updatedVehicle = vehicleRepository.save(java.util.Objects.requireNonNull(vehicle, "vehicle must not be null"));
                     var event = new VehicleUpdatedEvent(
                         updatedVehicle.getId(),
                         null, // No se actualiza la placa
@@ -113,10 +115,11 @@ public class VehicleCommandServiceImpl implements VehicleCommandService {
      */
     @Override
     public Optional<Vehicle> handle(Long vehicleId, VehicleStatus status) {
-        return vehicleRepository.findById(vehicleId)
-                .map(vehicle -> {
-                    vehicle.changeStatus(status);
-                    var updatedVehicle = vehicleRepository.save(vehicle);
+        if (vehicleId == null) return Optional.empty();
+        return vehicleRepository.findById(java.util.Objects.requireNonNull(vehicleId, "vehicleId must not be null"))
+            .map(vehicle -> {
+                vehicle.changeStatus(status);
+                var updatedVehicle = vehicleRepository.save(java.util.Objects.requireNonNull(vehicle, "vehicle must not be null"));
 
                     // Publicar evento de vehículo actualizado con cambio de estado
                     var event = new VehicleUpdatedEvent(
@@ -140,10 +143,11 @@ public class VehicleCommandServiceImpl implements VehicleCommandService {
      */
     @Override
     public Optional<Vehicle> handle(Long vehicleId) {
-        return vehicleRepository.findById(vehicleId)
-                .map(vehicle -> {
-                    vehicle.removeCarrier();
-                    var updatedVehicle = vehicleRepository.save(vehicle);
+        if (vehicleId == null) return Optional.empty();
+        return vehicleRepository.findById(java.util.Objects.requireNonNull(vehicleId, "vehicleId must not be null"))
+            .map(vehicle -> {
+                vehicle.removeCarrier();
+                var updatedVehicle = vehicleRepository.save(java.util.Objects.requireNonNull(vehicle, "vehicle must not be null"));
 
                     // Publicar evento de vehículo actualizado con eliminación de carrier
                     var event = new VehicleUpdatedEvent(

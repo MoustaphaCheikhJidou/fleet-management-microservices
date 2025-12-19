@@ -19,7 +19,8 @@ public class IssueQueryServiceImpl implements IssueQueryService {
 
     @Override
     public Optional<Issue> handle(GetIssueByIdQuery query) {
-        return issueRepository.findById(query.reportId());
+        if (query.reportId() == null) return Optional.empty();
+        return issueRepository.findById(java.util.Objects.requireNonNull(query.reportId(), "reportId must not be null"));
     }
 
     @Override
