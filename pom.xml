@@ -41,25 +41,27 @@
   </dependencies>
 
   <build>
+    <plugins>
+      <plugin>
+        <groupId>org.cyclonedx</groupId>
+        <artifactId>cyclonedx-maven-plugin</artifactId>
+        <version>2.9.1</version>
+        <executions>
+          <execution>
+            <phase>generate-resources</phase>
+            <goals>
+              <goal>makeAggregateBom</goal>
+            </goals>
+          </execution>
+        </executions>
+      </plugin>
+    </plugins>
     <pluginManagement>
       <plugins>
         <plugin>
           <groupId>org.springframework.boot</groupId>
           <artifactId>spring-boot-maven-plugin</artifactId>
           <version>3.5.0</version>
-        </plugin>
-        <plugin>
-          <groupId>org.cyclonedx</groupId>
-          <artifactId>cyclonedx-maven-plugin</artifactId>
-          <version>2.9.1</version>
-          <executions>
-            <execution>
-              <phase>generate-resources</phase>
-              <goals>
-                <goal>makeAggregateBom</goal>
-              </goals>
-            </execution>
-          </executions>
         </plugin>
         <plugin>
           <groupId>org.eclipse.m2e</groupId>
