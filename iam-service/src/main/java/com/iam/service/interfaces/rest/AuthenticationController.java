@@ -20,12 +20,15 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @RestController
 @RequestMapping(value = "/api/v1/authentication", produces = MediaType.APPLICATION_JSON_VALUE)
 @Tag(name = "Authentication", description = "Available Authentication Endpoints")
 public class AuthenticationController {
     private final UserCommandService userCommandService;
+    private static final Logger log = LoggerFactory.getLogger(AuthenticationController.class);
 
     public AuthenticationController(UserCommandService userCommandService) {
         this.userCommandService = userCommandService;
@@ -38,11 +41,13 @@ public class AuthenticationController {
             @ApiResponse(responseCode = "400", description = "Bad request.")
     })
     public ResponseEntity<UserResource> signUp(@RequestBody SignUpResource resource) {
+        log.info("Sign-up request for email={}", resource.email());
         var signUpCommand = SignUpCommandFromResourceAssembler.toCommandFromResource(resource);
         var user = userCommandService.handle(signUpCommand);
         if (user.isEmpty()) return ResponseEntity.badRequest().build();
         var userEntity = user.get();
         var userResource = UserResourceFromEntityAssembler.toResourceFromEntity(userEntity);
+        log.info("Sign-up successful for email={}", resource.email());
         return new ResponseEntity<>(userResource, HttpStatus.CREATED);
     }
 
@@ -53,11 +58,13 @@ public class AuthenticationController {
             @ApiResponse(responseCode = "404", description = "User not found.")
     })
     public ResponseEntity<AuthenticatedUserResource> signIn(@RequestBody SignInResource resource) {
+        log.info("Sign-in request for email={}", resource.email());
         var signInCommand = SignInCommandFromResourceAssembler.toCommandFromResource(resource);
         var authenticatedUserResult = userCommandService.handle(signInCommand);
         if (authenticatedUserResult.isEmpty()) return ResponseEntity.notFound().build();
         var authenticatedUser = authenticatedUserResult.get();
         var authenticatedUserResource = AuthenticatedUserResourceFromEntityAssembler.toResourceFromEntity(authenticatedUser.left, authenticatedUser.right);
+        log.info("Sign-in successful for email={}", resource.email());
         return ResponseEntity.ok(authenticatedUserResource);
     }
 }

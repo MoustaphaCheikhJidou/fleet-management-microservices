@@ -94,3 +94,7 @@ management:
       enabled: true
 # --- Added by terminal patch: dev schema management ---
 spring.jpa.hibernate.ddl-auto: update
+
+logging:
+  level:
+    org.springframework.security: DEBUG
