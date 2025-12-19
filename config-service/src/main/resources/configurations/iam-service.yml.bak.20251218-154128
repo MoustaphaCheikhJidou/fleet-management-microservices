@@ -1,0 +1,91 @@
+server:
+  port: 8090
+
+spring:
+  application:
+    name: iam-service
+  datasource:
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    url: jdbc:mysql://mysql:3306/iam_db?useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true
+    username: root
+    password: mauriciochacon
+  jpa:
+    hibernate:
+      ddl-auto: create
+    database: mysql
+    database-platform: org.hibernate.dialect.MySQLDialect
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.MySQLDialect
+        naming:
+          physical-strategy: com.example.iam.shared.infrastructure.persistence.jpa.configuration.strategy.SnakeCaseWithPluralizedTablePhysicalNamingStrategy
+  cloud:
+    function:
+      definition: userCreatedEvent;userUpdatedEvent
+    stream:
+      bindings:
+        userCreatedEvent-out-0:
+          destination: user-events
+          content-type: application/json
+          binder: rabbit
+        userUpdatedEvent-out-0:
+          destination: user-update-events
+          content-type: application/json
+          binder: rabbit
+      binders:
+        rabbit:
+          type: rabbit
+          environment:
+            spring:
+              rabbitmq:
+                host: rabbitmq
+                port: 5672
+                username: admin
+                password: admin123
+
+eureka:
+  client:
+    service-url:
+      defaultZone: http://eureka-service:8761/eureka/
+  instance:
+    prefer-ip-address: false
+    hostname: iam-service
+
+authorization:
+  jwt:
+    secret: ${JWT_SECRET:WriteHereYourSecretStringForTokenSigningCredentials}
+    expiration:
+      days: 7
+
+---
+spring:
+  config:
+    activate:
+      on-profile: docker
+  cloud:
+    stream:
+      rabbit:
+        binder:
+          connection-timeout: 30000
+          requested-heartbeat: 30
+      binders:
+        rabbit:
+          environment:
+            spring:
+              rabbitmq:
+                connection-timeout: 30000
+                requested-heartbeat: 30
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics
+  endpoint:
+    health:
+      show-details: always
+  health:
+    defaults:
+      enabled: true
+    rabbit:
+      enabled: true

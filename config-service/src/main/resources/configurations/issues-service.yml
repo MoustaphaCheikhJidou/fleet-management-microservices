@@ -1,0 +1,112 @@
+server:
+  port: 8096
+
+spring:
+  application:
+    name: issues-service
+  datasource:
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    url: jdbc:mysql://mysql:3306/issues_db?useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true
+    username: root
+    password: mauriciochacon
+  jpa:
+    hibernate:
+      ddl-auto: create
+    database: mysql
+    database-platform: org.hibernate.dialect.MySQLDialect
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.MySQLDialect
+        naming:
+          physical-strategy: com.issues.service.shared.infrastructure.persistence.jpa.configuration.strategy.SnakeCaseWithPluralizedTablePhysicalNamingStrategy
+  cloud:
+    function:
+      definition: userCreatedEvent;userUpdatedEvent;vehicleCreatedEvent;vehicleUpdatedEvent
+    stream:
+      bindings:
+        userCreatedEvent-in-0:
+          destination: user-events
+          content-type: application/json
+          group: issues-service-group
+          binder: rabbit
+        userUpdatedEvent-in-0:
+          destination: user-update-events
+          content-type: application/json
+          group: issues-service-group
+          binder: rabbit
+        vehicleCreatedEvent-in-0:
+          destination: vehicle-events
+          content-type: application/json
+          group: issues-service-group
+          binder: rabbit
+        vehicleUpdatedEvent-in-0:
+          destination: vehicle-update-events
+          content-type: application/json
+          group: issues-service-group
+          binder: rabbit
+        issueCreatedEvent-out-0:
+          destination: issue-events
+          content-type: application/json
+          binder: rabbit
+        issueUpdatedEvent-out-0:
+          destination: issue-update-events
+          content-type: application/json
+          binder: rabbit
+      binders:
+        rabbit:
+          type: rabbit
+          environment:
+            spring:
+              rabbitmq:
+                host: rabbitmq
+                port: 5672
+                username: admin
+                password: admin123
+      rabbit:
+        bindings:
+          userCreatedEvent-in-0:
+            consumer:
+              auto-bind-dlq: true
+              dlq-ttl: 60000
+              requeue-rejected: false
+          userUpdatedEvent-in-0:
+            consumer:
+              auto-bind-dlq: true
+              dlq-ttl: 60000
+              requeue-rejected: false
+          vehicleCreatedEvent-in-0:
+            consumer:
+              auto-bind-dlq: true
+              dlq-ttl: 60000
+              requeue-rejected: false
+          vehicleUpdatedEvent-in-0:
+            consumer:
+              auto-bind-dlq: true
+              dlq-ttl: 60000
+              requeue-rejected: false
+
+eureka:
+  client:
+    service-url:
+      defaultZone: http://eureka-service:8761/eureka/
+  instance:
+    prefer-ip-address: false
+    hostname: issues-service
+
+---
+spring:
+  config:
+    activate:
+      on-profile: docker
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics
+  endpoint:
+    health:
+      show-details: always
+  health:
+    defaults:
+      enabled: true

@@ -1,0 +1,101 @@
+server:
+  port: 8070
+spring:
+  application:
+    name: shipments-service
+  datasource:
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    url: jdbc:mysql://mysql:3306/shipments_db?useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true
+    username: root
+    password: mauriciochacon
+  jpa:
+    hibernate:
+      ddl-auto: create
+    database: mysql
+    database-platform: org.hibernate.dialect.MySQLDialect
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.MySQLDialect
+        naming:
+          physical-strategy: com.shipments.service.shared.infrastructure.persistence.jpa.configuration.strategy.SnakeCaseWithPluralizedTablePhysicalNamingStrategy
+  cloud:
+    function:
+      definition: userCreatedEvent;userUpdatedEvent;profileCreatedEvent
+    stream:
+      bindings:
+        userCreatedEvent-in-0:
+          destination: user-events
+          content-type: application/json
+          group: shipments-service-group
+          binder: rabbit
+        userUpdatedEvent-in-0:
+          destination: user-update-events
+          content-type: application/json
+          group: shipments-service-group
+          binder: rabbit
+        profileCreatedEvent-in-0:
+          destination: profile-events
+          content-type: application/json
+          group: shipments-service-group
+          binder: rabbit
+        shipmentCreatedEvent-out-0:
+          destination: shipment-events
+          content-type: application/json
+          binder: rabbit
+        shipmentUpdatedEvent-out-0:
+          destination: shipment-update-events
+          content-type: application/json
+          binder: rabbit
+      binders:
+        rabbit:
+          type: rabbit
+          environment:
+            spring:
+              rabbitmq:
+                host: rabbitmq
+                port: 5672
+                username: admin
+                password: admin123
+      rabbit:
+        bindings:
+          userCreatedEvent-in-0:
+            consumer:
+              auto-bind-dlq: true
+              dlq-ttl: 60000
+              requeue-rejected: false
+          userUpdatedEvent-in-0:
+            consumer:
+              auto-bind-dlq: true
+              dlq-ttl: 60000
+              requeue-rejected: false
+          profileCreatedEvent-in-0:
+            consumer:
+              auto-bind-dlq: true
+              dlq-ttl: 60000
+              requeue-rejected: false
+
+eureka:
+  client:
+    service-url:
+      defaultZone: http://eureka-service:8761/eureka/
+  instance:
+    prefer-ip-address: false
+    hostname: shipments-service
+
+---
+spring:
+  config:
+    activate:
+      on-profile: docker
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics
+  endpoint:
+    health:
+      show-details: always
+  health:
+    defaults:
+      enabled: true
