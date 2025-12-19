@@ -1,0 +1,25 @@
+{
+  "version": "0.2",
+  "language": "en",
+  "words": [
+    "springframework",
+    "springdoc",
+    "springboot",
+    "projectlombok",
+    "mycompany",
+    "encryptorcode",
+    "cyclonedx",
+    "webmvc",
+    "jpa",
+    "jdbc",
+    "kafka",
+    "rabbitmq",
+    "eureka"
+  ],
+  "ignoreWords": [],
+  "ignorePaths": [
+    "**/node_modules/**",
+    "**/target/**",
+    "**/.git/**"
+  ]
+}
