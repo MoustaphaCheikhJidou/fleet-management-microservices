@@ -8,7 +8,12 @@ spring:
     driver-class-name: com.mysql.cj.jdbc.Driver
     url: jdbc:mysql://mysql:3306/issues_db?useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true
     username: root
-    password: mauriciochacon
+    password: ${MYSQL_ROOT_PASSWORD:}
+  rabbitmq:
+    host: rabbitmq
+    port: 5672
+    username: ${RABBITMQ_DEFAULT_USER:fleet}
+    password: ${RABBITMQ_DEFAULT_PASS:fleet_password}
   jpa:
     hibernate:
       ddl-auto: create
@@ -60,8 +65,8 @@ spring:
               rabbitmq:
                 host: rabbitmq
                 port: 5672
-                username: admin
-                password: admin123
+                username: ${RABBITMQ_DEFAULT_USER:fleet}
+                password: ${RABBITMQ_DEFAULT_PASS:fleet_password}
       rabbit:
         bindings:
           userCreatedEvent-in-0:
