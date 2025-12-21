@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="fr">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Fleet Management | Accueil</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Sora:wght@400;500;600;700&family=Space+Grotesk:wght@400;500;600&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="css/app.css" />
+  </head>
+  <body class="ui-body">
+    <div class="site-shell">
+      <header class="site-header">
+        <div class="brand-cluster">
+          <span class="logo-pill">FleetOS</span>
+          <div class="brand-copy">
+            <p class="brand-eyebrow">Microservices distribués</p>
+            <p class="brand-title">Fleet Management Suite</p>
+          </div>
+        </div>
+        <nav class="site-nav">
+          <a href="#architecture" class="ghost-link">Architecture</a>
+          <a href="#services" class="ghost-link">Services</a>
+          <a href="https://github.com" class="ghost-link" target="_blank" rel="noreferrer">Docs techniques</a>
+          <a class="ghost-button" href="signup.html">Créer un compte</a>
+          <a class="primary-button" href="login.html">Se connecter</a>
+        </nav>
+      </header>
+
+      <main>
+        <section class="hero-grid">
+          <div class="hero-copy">
+            <p class="eyebrow">Pilotage temps réel</p>
+            <h1>Un cockpit web unique pour orchestrer véhicules, conducteurs et incidents.</h1>
+            <p>
+              Chaque requête transite par le Gateway sécurisé, les services récupèrent leur configuration via Config Server et se
+              fédèrent dans Eureka. Les rôles sont portés par un JWT unique que l’Admin Portal peut gouverner sans scripts.
+            </p>
+            <div class="hero-actions">
+              <a class="secondary-button" href="login.html">Entrer dans la console</a>
+              <button class="tertiary-button" type="button" onclick="window.location.href='admin-dashboard.html'">
+                Voir l’espace Admin
+              </button>
+            </div>
+            <ul class="badge-stack">
+              <li>JWT + RoleAuthorizationFilter</li>
+              <li>RabbitMQ async events</li>
+              <li>MySQL multi-schémas</li>
+            </ul>
+          </div>
+          <div class="hero-panel" aria-label="Synthèse des microservices">
+            <div class="hero-panel__card">
+              <p>Services critiques</p>
+              <ul>
+                <li><span>Eureka</span><strong>8761</strong></li>
+                <li><span>Config Server</span><strong>8888/8889</strong></li>
+                <li><span>Gateway</span><strong>8080</strong></li>
+              </ul>
+            </div>
+            <div class="hero-panel__card">
+              <p>Admin Portal</p>
+              <ul>
+                <li><span>Seed SUPERADMIN_* env</span><strong>Automatique</strong></li>
+                <li><span>Création d’admins</span><strong>POST /api/v1/admin/users</strong></li>
+                <li><span>Activation comptes</span><strong>PATCH /status</strong></li>
+              </ul>
+            </div>
+            <div class="hero-panel__card hero-panel__card--accent">
+              <p>Sécurité</p>
+              <ul>
+                <li><span>Session</span><strong>Stateless JWT</strong></li>
+                <li><span>Routes privées</span><strong>Filtres Gateway</strong></li>
+                <li><span>Rôles</span><strong>Admin · Carrier · Driver</strong></li>
+              </ul>
+            </div>
+          </div>
+        </section>
+
+        <section id="architecture" class="feature-grid">
+          <article class="feature-card">
+            <h3>Trame cloud-native</h3>
+            <p>
+              Build Maven unique, services Spring Boot isolés avec Dockerfile dédié. Les pipelines utilisent la commande
+              <code>./mvnw -DskipTests package</code> avant tout déploiement compose.
+            </p>
+          </article>
+          <article class="feature-card">
+            <h3>Résilience opérationnelle</h3>
+            <p>
+              Resilience4J protège les appels Vehicle/Driver/Shipments, tandis que RabbitMQ assure la diffusion d’événements IAM
+              vers les services aval.
+            </p>
+          </article>
+          <article class="feature-card">
+            <h3>Expérience admin</h3>
+            <p>
+              Un template responsive permet aux équipes support de créer, activer ou suspendre un compte sans outils externes
+              tout en respectant la charte de sécurité IAM.
+            </p>
+          </article>
+        </section>
+
+        <section id="services" class="microservices-panel">
+          <header>
+            <div>
+              <p class="eyebrow">Mission</p>
+              <h2>Application de suivi de flotte distribuée</h2>
+              <p>
+                Exposer l’état complet d’un véhicule (conducteur, position, incidents) en orchestrant des microservices Spring.
+              </p>
+            </div>
+            <div class="microservices-tags">
+              <span>Vehicle Service</span>
+              <span>Driver Service</span>
+              <span>Tracking Service</span>
+              <span>Incident Service</span>
+            </div>
+          </header>
+          <div class="microservices-body">
+            <div>
+              <h4>Technologies imposées</h4>
+              <ul>
+                <li>Eureka pour la découverte</li>
+                <li>Feign & Resilience4J pour la communication</li>
+                <li>Gateway + RoleAuthorizationFilter pour la sécurité</li>
+                <li>Config Server + Actuator pour l’observabilité</li>
+              </ul>
+            </div>
+            <div>
+              <h4>Livrables clés</h4>
+              <ul>
+                <li>Seed SuperAdmin configurable via SUPERADMIN_* env vars</li>
+                <li>Console d’authentification dédiée (login & sign-up)</li>
+                <li>Admin Portal pour la gestion des comptes et rôles</li>
+                <li>Scripts de test (test_endpoints.py / test_apis.sh)</li>
+              </ul>
+            </div>
+          </div>
+        </section>
+      </main>
+
+      <footer class="site-footer">
+        <p>© 2025 Fleet Management • Front statique mis à jour avec parcours Admin et thèmes Sora/Space Grotesk.</p>
+      </footer>
+    </div>
+  </body>
+</html>

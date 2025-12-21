@@ -60,6 +60,12 @@ authorization:
     expiration:
       days: 7
 
+iam:
+  superadmin:
+    username: ${IAM_ADMIN_USERNAME:${SUPERADMIN_USERNAME:admin}}
+    email: ${IAM_ADMIN_EMAIL:${SUPERADMIN_EMAIL:admin1@gmail.com}}
+    password: ${IAM_ADMIN_PASSWORD:${SUPERADMIN_PASSWORD:Ma@22117035}}
+
 ---
 spring:
   config:

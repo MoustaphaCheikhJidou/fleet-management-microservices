@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="fr">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Fleet Management | Tableau de bord</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Sora:wght@400;500;600;700&family=Space+Grotesk:wght@400;500;600&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="css/app.css" />
+  </head>
+  <body class="ui-body">
+    <div class="dashboard-shell">
+      <aside class="dashboard-sidebar">
+        <div class="sidebar-head">
+          <span class="logo-pill">FleetOS</span>
+          <p>Admin Portal</p>
+        </div>
+        <nav>
+          <ul class="sidebar-links">
+            <li><a href="index.html">Accueil</a></li>
+            <li><a href="login.html">Connexion</a></li>
+            <li><a href="signup.html">Création de compte</a></li>
+            <li data-visible-for="ROLE_ADMIN" hidden><a href="admin-dashboard.html">Template Admin</a></li>
+            <li><button id="logoutBtn" class="ghost-button ghost-button--light">Déconnexion</button></li>
+          </ul>
+        </nav>
+        <div class="sidebar-note">
+          <p>Routes sécurisées via Gateway 8080.</p>
+          <p>JWT signé depuis IAM-service.</p>
+        </div>
+      </aside>
+
+      <main class="dashboard-main">
+        <header class="dashboard-header">
+          <div>
+            <p class="eyebrow">Session active</p>
+            <h1 id="userEmail">Utilisateur connecté</h1>
+            <p>Votre token contient les rôles suivants :</p>
+            <ul id="roleBadges" class="role-badges"></ul>
+          </div>
+          <div class="session-chip">
+            <p>JWT</p>
+            <span id="tokenPreview">—</span>
+          </div>
+        </header>
+
+        <section class="stat-grid">
+          <article class="stat-card">
+            <p>Gateway</p>
+            <h3>Port 8080</h3>
+            <p class="stat-sub">RoleAuthorizationFilter actif</p>
+          </article>
+          <article class="stat-card">
+            <p>IAM Service</p>
+            <h3>Port 8090</h3>
+            <p class="stat-sub">Endpoints `/api/v1/authentication/**`</p>
+          </article>
+          <article class="stat-card">
+            <p>SuperAdmin</p>
+            <h3>SUPERADMIN_* env</h3>
+            <p class="stat-sub">Seeder actif au démarrage</p>
+          </article>
+        </section>
+
+        <section class="panel">
+          <div class="panel-head">
+            <div>
+              <p class="eyebrow">Diagnostics</p>
+              <h2>Tester la santé des microservices</h2>
+            </div>
+            <button id="healthBtn" class="primary-button">Lancer le health check</button>
+          </div>
+          <pre id="healthResult" class="health-result" aria-live="polite">Cliquez sur « Lancer le health check ».</pre>
+        </section>
+
+        <section class="panel" id="adminBoard" data-visible-for="ROLE_ADMIN" hidden>
+          <div class="panel-head">
+            <div>
+              <p class="eyebrow">Centre d’administration</p>
+              <h2>Gérer les comptes IAM</h2>
+            </div>
+            <div class="panel-actions">
+              <button id="refreshUsersBtn" class="ghost-button">Actualiser les utilisateurs</button>
+            </div>
+          </div>
+
+          <div class="admin-grid">
+            <div class="admin-form">
+              <h3>Créer un administrateur</h3>
+              <form id="createAdminForm" class="form-grid form-grid--stacked">
+                <label class="form-label" for="adminUsername">Nom d’utilisateur</label>
+                <input class="form-control" id="adminUsername" name="username" required placeholder="ex: fleet.supervisor" />
+
+                <label class="form-label" for="adminEmail">Email</label>
+                <input class="form-control" id="adminEmail" name="email" type="email" required placeholder="admin@entreprise.com" />
+
+                <label class="form-label" for="adminPassword">Mot de passe</label>
+                <input class="form-control" id="adminPassword" name="password" type="password" required minlength="8" />
+
+                <button class="primary-button" type="submit">Créer l’administrateur</button>
+              </form>
+              <p id="adminFormStatus" class="status-text" role="status" aria-live="polite"></p>
+            </div>
+
+            <div class="admin-table">
+              <div class="table-head">
+                <h3>Utilisateurs enregistrés</h3>
+                <p id="adminUsersStatus" class="status-text"></p>
+              </div>
+              <div class="table-wrapper" role="region" aria-live="polite">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>ID</th>
+                      <th>Utilisateur</th>
+                      <th>Email</th>
+                      <th>Rôles</th>
+                      <th>Statut</th>
+                      <th>Action</th>
+                    </tr>
+                  </thead>
+                  <tbody id="adminUsersBody"></tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section class="panel">
+          <div class="panel-head">
+            <div>
+              <p class="eyebrow">Rappels architecture</p>
+              <h2>Microservices Fleet</h2>
+            </div>
+          </div>
+          <div class="microservices-body microservices-body--inline">
+            <div>
+              <h4>Services métier</h4>
+              <ul>
+                <li>Vehicle Service — caractéristiques et disponibilité.</li>
+                <li>Driver Service — profils conducteurs.</li>
+                <li>Tracking Service — flux GPS simulés.</li>
+                <li>Incident Service — gestion des alertes terrain.</li>
+              </ul>
+            </div>
+            <div>
+              <h4>Stack technique</h4>
+              <ul>
+                <li>Gateway + Eureka + Config Server.</li>
+                <li>RabbitMQ pour la propagation d’événements IAM.</li>
+                <li>Scripts `RUN_FULL_SETUP.sh` et `test_endpoints.py` prêts à l’emploi.</li>
+              </ul>
+            </div>
+          </div>
+        </section>
+      </main>
+    </div>
+
+    <script type="module" src="js/dashboard.js"></script>
+  </body>
+</html>

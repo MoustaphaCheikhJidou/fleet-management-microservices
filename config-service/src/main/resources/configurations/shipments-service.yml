@@ -6,8 +6,13 @@ spring:
   datasource:
     driver-class-name: com.mysql.cj.jdbc.Driver
     url: jdbc:mysql://mysql:3306/shipments_db?useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true
-    username: root
-    password: mauriciochacon
+    username: ${MYSQL_ROOT_USERNAME:root}
+    password: ${MYSQL_ROOT_PASSWORD:}
+  rabbitmq:
+    host: ${RABBITMQ_HOST:rabbitmq}
+    port: ${RABBITMQ_PORT:5672}
+    username: ${RABBITMQ_DEFAULT_USER:guest}
+    password: ${RABBITMQ_DEFAULT_PASS:guest}
   jpa:
     hibernate:
       ddl-auto: create
@@ -52,10 +57,10 @@ spring:
           environment:
             spring:
               rabbitmq:
-                host: rabbitmq
-                port: 5672
-                username: admin
-                password: admin123
+                host: ${RABBITMQ_HOST:rabbitmq}
+                port: ${RABBITMQ_PORT:5672}
+                username: ${RABBITMQ_DEFAULT_USER:guest}
+                password: ${RABBITMQ_DEFAULT_PASS:guest}
       rabbit:
         bindings:
           userCreatedEvent-in-0:

@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="fr">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Fleet Management | Création de compte</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Sora:wght@400;500;600;700&family=Space+Grotesk:wght@400;500;600&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="css/app.css" />
+  </head>
+  <body class="ui-body">
+    <div class="auth-shell auth-shell--reverse">
+      <section class="auth-panel" aria-labelledby="signup-heading">
+        <header>
+          <p class="eyebrow">Application Distribuée de Gestion d’un Parc Automobile</p>
+          <h2 id="signup-heading">Créer un compte opérateur (Carrier ou Driver)</h2>
+          <p>Les inscriptions publiques n’autorisent que les rôles métiers terrain. Les administrateurs restent gérés depuis
+            le portail backend pour éviter toute élévation de privilèges.</p>
+        </header>
+        <div class="auth-panel__card">
+          <p class="field-note">Les données sont stockées dans MySQL via IAM-service. Une confirmation apparaît ci-dessous.</p>
+          <form id="signupForm" class="form-grid form-grid--stacked">
+            <div class="form-field">
+              <label class="form-label" for="signupEmail">Email professionnel</label>
+              <input
+                class="form-control"
+                id="signupEmail"
+                type="email"
+                name="email"
+                required
+                placeholder="team@transporteur.com"
+                autocomplete="email"
+              />
+            </div>
+
+            <div class="form-field">
+              <label class="form-label" for="signupPassword">Mot de passe</label>
+              <input
+                class="form-control"
+                id="signupPassword"
+                type="password"
+                name="password"
+                required
+                minlength="8"
+                autocomplete="new-password"
+              />
+            </div>
+
+            <div class="form-field">
+              <label class="form-label" for="signupRole">Rôle principal autorisé</label>
+              <select class="form-select" name="role" id="signupRole" required>
+                <option value="ROLE_CARRIER">Client Exploitant (ROLE_CARRIER)</option>
+                <option value="ROLE_DRIVER">Conducteur terrain (ROLE_DRIVER)</option>
+              </select>
+              <p class="field-note" role="note">L’auto-inscription est limitée à ces rôles métiers.</p>
+            </div>
+
+            <div class="notice-card" role="note">
+              <strong>Important :</strong> Les comptes administrateur sont créés uniquement par un administrateur connecté via admin-dashboard.html.
+            </div>
+
+            <button class="primary-button" type="submit">Créer un compte</button>
+          </form>
+          <p id="signupStatus" class="status-text" role="status" aria-live="polite"></p>
+          <p class="auth-alt">Déjà inscrit ? <a href="login.html" class="ghost-link">Retour à la connexion</a></p>
+        </div>
+      </section>
+
+      <section class="auth-hero">
+        <p class="eyebrow">Flux IAM</p>
+        <h1>Chaque inscription alimente la plateforme FleetOS.</h1>
+        <p>
+          Les événements `iam.users.created` alimentent Profiles, Vehicles et Issues pour exposer immédiatement le nouveau membre
+          dans les tableaux de bord. Le provisioning reste piloté par Eureka et Config Server.
+        </p>
+        <ul class="badge-stack badge-stack--columns">
+          <li>Validation Spring Boot</li>
+          <li>JWT enrichi & diffusion RabbitMQ</li>
+          <li>Monitoring Actuator prêt</li>
+        </ul>
+        <div class="notice-card notice-card--inline" role="note">
+          <strong>Astuce :</strong> lancez `docker compose up -d --build` avant de tester afin que Gateway, IAM, Vehicles et Issues
+          soient tous enregistrés dans Eureka.
+        </div>
+      </section>
+    </div>
+
+    <script type="module" src="js/signup.js"></script>
+  </body>
+</html>
