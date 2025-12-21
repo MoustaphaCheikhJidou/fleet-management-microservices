@@ -24,6 +24,11 @@ public class User extends AuditableAbstractAggregateRoot<User> {
     private String email;
 
     @NotBlank
+    @Size(max = 60)
+    @Column(unique = true)
+    private String username;
+
+    @NotBlank
     @Size(max = 120)
     private String password;
 
@@ -35,6 +40,9 @@ public class User extends AuditableAbstractAggregateRoot<User> {
 
     @Column(name = "created_by")
     private Long createdBy;
+
+    @Column(nullable = false)
+    private boolean enabled = true;
 
     /**
      * Default constructor.
@@ -50,8 +58,13 @@ public class User extends AuditableAbstractAggregateRoot<User> {
      * @param password the password
      */
     public User(String email, String password) {
+        this(email, email, password);
+    }
+
+    public User(String email, String username, String password) {
         this();
         this.email = email;
+        this.username = (username == null || username.isBlank()) ? email : username;
         this.password = password;
         this.roles = new HashSet<>();
     }
@@ -64,7 +77,12 @@ public class User extends AuditableAbstractAggregateRoot<User> {
      * @param roles the roles
      */
     public User(String email, String password, List<Role> roles) {
-        this(email, password);
+        this(email, email, password);
+        addRoles(roles);
+    }
+
+    public User(String email, String username, String password, List<Role> roles) {
+        this(email, username, password);
         addRoles(roles);
     }
 
@@ -78,6 +96,11 @@ public class User extends AuditableAbstractAggregateRoot<User> {
      */
     public User(String email, String password, List<Role> roles, Long createdBy) {
         this(email, password, roles);
+        this.createdBy = createdBy;
+    }
+
+    public User(String email, String username, String password, List<Role> roles, Long createdBy) {
+        this(email, username, password, roles);
         this.createdBy = createdBy;
     }
 

@@ -61,7 +61,7 @@ public class Role {
      * @return The default role (User Role).
      */
     public static Role getDefaultRole() {
-        return new Role(Roles.ROLE_MANAGER);
+        return new Role(Roles.ROLE_CARRIER);
     }
 
     /**

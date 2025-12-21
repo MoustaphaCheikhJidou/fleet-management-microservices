@@ -1,0 +1,51 @@
+spring:
+  application:
+    name: iam-service
+  cloud:
+    config:
+      enabled: false
+    discovery:
+      enabled: false
+    stream:
+      bindings:
+        userCreatedEvent-out-0:
+          producer:
+            auto-startup: false
+        userUpdatedEvent-out-0:
+          producer:
+            auto-startup: false
+  datasource:
+    driver-class-name: com.mysql.cj.jdbc.Driver
+  jpa:
+    defer-datasource-initialization: true
+    hibernate:
+      ddl-auto: create-drop
+    properties:
+      hibernate:
+        naming:
+          physical-strategy: com.iam.service.shared.infrastructure.persistence.jpa.configuration.strategy.SnakeCaseWithPluralizedTablePhysicalNamingStrategy
+  rabbitmq:
+    host: localhost
+    port: 5672
+  config:
+    import: "optional:configserver:"
+
+eureka:
+  client:
+    enabled: false
+
+iam:
+  admin:
+    email: admin@test.local
+    password: Adm1n_Pass!
+
+authorization:
+  jwt:
+    secret: ChangeThisSecretForTests_1234567890
+    expiration:
+      days: 7
+
+logging:
+  level:
+    org.springframework.cloud: WARN
+    org.springframework.security: INFO

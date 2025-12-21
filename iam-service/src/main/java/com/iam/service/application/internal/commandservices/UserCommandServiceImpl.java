@@ -5,21 +5,28 @@ import com.iam.service.application.internal.outboundservices.tokens.TokenService
 import com.iam.service.domain.model.aggregates.User;
 import com.iam.service.domain.model.commands.ChangeEmailCommand;
 import com.iam.service.domain.model.commands.ChangePasswordCommand;
+import com.iam.service.domain.model.commands.CreateAdminUserCommand;
 import com.iam.service.domain.model.commands.SignInCommand;
 import com.iam.service.domain.model.commands.SignUpCommand;
 import com.iam.service.domain.model.commands.RegisterCarrierCommand;
+import com.iam.service.domain.model.commands.UpdateUserStatusCommand;
 import com.iam.service.domain.model.events.UserCreatedEvent;
 import com.iam.service.domain.model.valueobjects.Roles;
 import com.iam.service.domain.services.UserCommandService;
 import com.iam.service.infrastructure.persistence.jpa.repositories.RoleRepository;
 import com.iam.service.infrastructure.persistence.jpa.repositories.UserRepository;
+import org.springframework.http.HttpStatus;
 import org.apache.commons.lang3.tuple.ImmutablePair;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.cloud.stream.function.StreamBridge;
 import org.springframework.stereotype.Service;
+import org.springframework.web.server.ResponseStatusException;
 
+import java.util.EnumSet;
+import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 /**
@@ -33,6 +40,7 @@ import java.util.stream.Collectors;
 @Service
 public class UserCommandServiceImpl implements UserCommandService {
     private static final Logger log = LoggerFactory.getLogger(UserCommandServiceImpl.class);
+    private static final Set<Roles> SELF_REGISTRATION_ROLES = EnumSet.of(Roles.ROLE_CARRIER, Roles.ROLE_DRIVER);
 
     private final UserRepository userRepository;
     private final RoleRepository roleRepository;
@@ -59,19 +67,27 @@ public class UserCommandServiceImpl implements UserCommandService {
     // inherited javadoc
     @Override
     public Optional<User> handle(SignUpCommand command) {
-        if (userRepository.existsByEmail(command.username())) throw new RuntimeException("Email already exists");
-        var roles = command.roles().stream().map(role -> roleRepository.findByName(role.getName())
-                .orElseThrow(() -> new RuntimeException("Role name not found"))).toList();
+        if (userRepository.existsByEmail(command.username())) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "Email déjà utilisé");
+        }
+        var roles = command.roles().stream()
+            .map(role -> roleRepository.findByName(role.getName())
+                .orElseThrow(() -> new RuntimeException("Role name not found")))
+            .peek(role -> {
+                if (role.getName() == Roles.ROLE_ADMIN) {
+                    throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Inscription administrateur interdite");
+                }
+            })
+            .filter(role -> SELF_REGISTRATION_ROLES.contains(role.getName()))
+            .collect(Collectors.toList());
+
+        if (roles.isEmpty()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Inscription limitée aux profils Exploitant ou Conducteur");
+        }
         var user = new User(command.username(), hashingService.encode(command.password()), roles);
         var savedUser = userRepository.save(user);
 
-        try {
-            UserCreatedEvent event = new UserCreatedEvent(savedUser.getId(), savedUser.getEmail());
-            streamBridge.send("user-events", event);
-            log.info("User created event published for userId: {}", savedUser.getId());
-        } catch (Exception e) {
-            log.error("Failed to publish UserCreatedEvent for userId: {}", savedUser.getId(), e);
-        }
+        publishUserCreatedEvent(savedUser, "self-signup");
         return Optional.of(savedUser);
     }
 
@@ -80,6 +96,9 @@ public class UserCommandServiceImpl implements UserCommandService {
     public Optional<ImmutablePair<User, String>> handle(SignInCommand command) {
         var user = userRepository.findByEmail(command.username())
                 .orElseThrow(() -> new RuntimeException("Email not found"));
+        if (!user.isEnabled()) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Compte désactivé");
+        }
         if (!hashingService.matches(command.password(), user.getPassword()))
             throw new RuntimeException("Invalid password");
         var token = tokenService.generateToken(user.getEmail());
@@ -135,7 +154,7 @@ public class UserCommandServiceImpl implements UserCommandService {
     @Override
     public Optional<User> handle(RegisterCarrierCommand command) {
         if (userRepository.existsByEmail(command.username())) {
-            throw new RuntimeException("Email already exists");
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "Email déjà utilisé");
         }
 
         // Obtener los roles (asegurándonos que incluya ROLE_CARRIER)
@@ -157,16 +176,60 @@ public class UserCommandServiceImpl implements UserCommandService {
         var user = new User(command.username(), hashingService.encode(command.password()), roles, command.managerId());
         var savedUser = userRepository.save(user);
 
-        // Publicar evento de usuario creado
+        publishUserCreatedEvent(savedUser, "carrier-registration");
+        return Optional.of(savedUser);
+    }
+
+    @Override
+    public Optional<User> handle(CreateAdminUserCommand command) {
+        if (command.email() == null || command.email().isBlank()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Email requis");
+        }
+        if (command.password() == null || command.password().isBlank()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Mot de passe requis");
+        }
+
+        var sanitizedUsername = (command.username() == null || command.username().isBlank())
+                ? command.email()
+                : command.username().trim();
+
+        if (userRepository.existsByEmail(command.email())) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "Email déjà utilisé");
+        }
+
+        if (userRepository.existsByUsername(sanitizedUsername)) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "Nom d'utilisateur déjà utilisé");
+        }
+
+        var adminRole = roleRepository.findByName(Roles.ROLE_ADMIN)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "ROLE_ADMIN introuvable"));
+
+        var newAdmin = new User(command.email(), sanitizedUsername, hashingService.encode(command.password()), List.of(adminRole));
+        var savedUser = userRepository.save(newAdmin);
+        publishUserCreatedEvent(savedUser, "admin-portal");
+        return Optional.of(savedUser);
+    }
+
+    @Override
+    public Optional<User> handle(UpdateUserStatusCommand command) {
+        if (command.userId() == null) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Identifiant utilisateur requis");
+        }
+
+        var user = userRepository.findById(command.userId())
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Utilisateur introuvable"));
+        user.setEnabled(command.enabled());
+        var savedUser = userRepository.save(user);
+        return Optional.of(savedUser);
+    }
+
+    private void publishUserCreatedEvent(User savedUser, String context) {
         try {
             UserCreatedEvent event = new UserCreatedEvent(savedUser.getId(), savedUser.getEmail());
             streamBridge.send("user-events", event);
-            log.info("User created event published for carrier userId: {}, created by manager: {}",
-                    savedUser.getId(), command.managerId());
+            log.info("User created event published for userId: {} ({})", savedUser.getId(), context);
         } catch (Exception e) {
             log.error("Failed to publish UserCreatedEvent for userId: {}", savedUser.getId(), e);
         }
-
-        return Optional.of(savedUser);
     }
 }

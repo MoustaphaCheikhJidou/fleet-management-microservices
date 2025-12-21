@@ -3,9 +3,11 @@ package com.iam.service.domain.services;
 import com.iam.service.domain.model.aggregates.User;
 import com.iam.service.domain.model.commands.ChangeEmailCommand;
 import com.iam.service.domain.model.commands.ChangePasswordCommand;
+import com.iam.service.domain.model.commands.CreateAdminUserCommand;
 import com.iam.service.domain.model.commands.RegisterCarrierCommand;
 import com.iam.service.domain.model.commands.SignInCommand;
 import com.iam.service.domain.model.commands.SignUpCommand;
+import com.iam.service.domain.model.commands.UpdateUserStatusCommand;
 import org.apache.commons.lang3.tuple.ImmutablePair;
 
 import java.util.Optional;
@@ -59,6 +61,22 @@ public interface UserCommandService {
      * @return an optional of user if the carrier registration was successful
      */
     Optional<User> handle(RegisterCarrierCommand command);
+
+    /**
+     * Handle create admin user command.
+     *
+     * @param command the command with new admin data
+     * @return the created admin user
+     */
+    Optional<User> handle(CreateAdminUserCommand command);
+
+    /**
+     * Handle update user status command.
+     *
+     * @param command toggle command
+     * @return the updated user if present
+     */
+    Optional<User> handle(UpdateUserStatusCommand command);
 
     /**
      * Delete a user by ID.

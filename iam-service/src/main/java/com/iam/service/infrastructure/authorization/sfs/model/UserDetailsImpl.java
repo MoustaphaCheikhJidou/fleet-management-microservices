@@ -28,16 +28,19 @@ public class UserDetailsImpl implements UserDetails {
 
     private final Collection<? extends GrantedAuthority> authorities;
 
+    private final boolean enabled;
+
     /**
      * Constructor
      * @param email Email
      * @param password Password
      * @param authorities Authorities
      */
-    public UserDetailsImpl(String email, String password, Collection<? extends GrantedAuthority> authorities) {
+    public UserDetailsImpl(String email, String password, Collection<? extends GrantedAuthority> authorities, boolean enabled) {
         this.email = email;
         this.password = password;
         this.authorities = authorities;
+        this.enabled = enabled;
     }
 
     /**
@@ -52,9 +55,10 @@ public class UserDetailsImpl implements UserDetails {
                 .toList();
 
         return new UserDetailsImpl(
-                user.getEmail(),
-                user.getPassword(),
-                authorities
+            user.getEmail(),
+            user.getPassword(),
+            authorities,
+            user.isEnabled()
         );
     }
 
@@ -80,6 +84,6 @@ public class UserDetailsImpl implements UserDetails {
 
     @Override
     public boolean isEnabled() {
-        return true;
+        return enabled;
     }
 }

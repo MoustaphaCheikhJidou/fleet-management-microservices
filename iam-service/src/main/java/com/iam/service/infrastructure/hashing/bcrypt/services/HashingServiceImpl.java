@@ -1,6 +1,7 @@
 package com.iam.service.infrastructure.hashing.bcrypt.services;
 
 import com.iam.service.infrastructure.hashing.bcrypt.BCryptHashingService;
+import org.springframework.context.annotation.Primary;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
 
@@ -9,6 +10,7 @@ import org.springframework.stereotype.Service;
  * This class is responsible for encoding and matching the raw password.
  */
 @Service
+@Primary
 public class HashingServiceImpl implements BCryptHashingService {
     private final BCryptPasswordEncoder passwordEncoder;
 

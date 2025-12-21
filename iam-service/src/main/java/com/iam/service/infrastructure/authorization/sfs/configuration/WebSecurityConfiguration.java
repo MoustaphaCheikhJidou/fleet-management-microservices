@@ -1,5 +1,6 @@
 package com.iam.service.infrastructure.authorization.sfs.configuration;
 
+import com.iam.service.infrastructure.authorization.sfs.filters.JwtAuthorizationFilter;
 import com.iam.service.infrastructure.authorization.sfs.services.UserDetailsServiceImpl;
 import com.iam.service.infrastructure.hashing.bcrypt.BCryptHashingService;
 import org.springframework.context.annotation.Bean;
@@ -7,11 +8,13 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
 import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
+import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
@@ -20,13 +23,18 @@ import java.util.List;
 
 @Configuration
 @EnableWebSecurity
+@EnableMethodSecurity(prePostEnabled = true)
 public class WebSecurityConfiguration {
     private final UserDetailsServiceImpl userDetailsService;
     private final BCryptHashingService hashingService;
+    private final JwtAuthorizationFilter jwtAuthorizationFilter;
 
-    public WebSecurityConfiguration(UserDetailsServiceImpl userDetailsService, BCryptHashingService hashingService) {
+    public WebSecurityConfiguration(UserDetailsServiceImpl userDetailsService,
+                                    BCryptHashingService hashingService,
+                                    JwtAuthorizationFilter jwtAuthorizationFilter) {
         this.userDetailsService = userDetailsService;
         this.hashingService = hashingService;
+        this.jwtAuthorizationFilter = jwtAuthorizationFilter;
     }
 
     @Bean
@@ -55,11 +63,16 @@ public class WebSecurityConfiguration {
                 .csrf(csrf -> csrf.disable())
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/api/v1/authentication/**", "/api/v1/carriers/sign-up", "/actuator/**").permitAll()
+                        .requestMatchers(
+                            "/api/v1/authentication/**",
+                            "/api/v1/auth/**",
+                            "/api/v1/carriers/sign-up").permitAll()
+                        .requestMatchers("/actuator/**").permitAll()
                         .requestMatchers("/v3/api-docs/**", "/swagger-ui/**", "/swagger-resources/**").permitAll()
-                        .requestMatchers("/api/v1/users/**", "/api/v1/roles/**").permitAll()
+                        .requestMatchers("/api/v1/admin/**").hasRole("ADMIN")
                         .anyRequest().authenticated())
-                .authenticationProvider(authenticationProvider());
+                .authenticationProvider(authenticationProvider())
+                .addFilterBefore(jwtAuthorizationFilter, UsernamePasswordAuthenticationFilter.class);
 
         return http.build();
     }

@@ -9,6 +9,7 @@ package com.iam.service.domain.model.valueobjects;
 public enum Roles {
     ROLE_ADMIN,
     ROLE_CARRIER,
+    ROLE_DRIVER,
     ROLE_MANAGER
 }
 
