@@ -20,6 +20,8 @@
   - `http://localhost:8090/actuator/health` → `IAM_HEALTH_HTTP=200`
   - `http://localhost:8095/actuator/health` → `VEH_HEALTH_HTTP=200`
   - `http://localhost:8096/actuator/health` → `ISSUES_HEALTH_HTTP=200`
+  - `http://localhost:9090/actuator/health` → `PROFILES_HEALTH_HTTP=200`
+  - `http://localhost:8070/actuator/health` → `SHIPMENTS_HEALTH_HTTP=200`
 
 ### Automated API Regression (`bash test_apis.sh`)
 - Carrier signup → `HTTP/1.1 201` with response `{"id":22,"email":"test+1766352710@example.com","roles":["ROLE_CARRIER"]}`.
