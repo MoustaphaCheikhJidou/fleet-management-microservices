@@ -1,11 +1,73 @@
 # FLEET MANAGEMENT MICROSERVICES - REPAIR SUMMARY
 
+## 2025-12-21 Validation & Evidence
+
+### Hardenings Locked In
+- ✅ `iam-service` admin endpoints now guarded with `@PreAuthorize("hasRole('ADMIN')")` inside [iam-service/src/main/java/com/iam/service/interfaces/rest/AdminUsersController.java](iam-service/src/main/java/com/iam/service/interfaces/rest/AdminUsersController.java); matches the `RoleAuthorizationFilter` expectation so gateway no longer rewrites roles as `ROLE_ROLE_ADMIN`.
+- ✅ JWT issuance verified end-to-end (IAM → Gateway) with the SuperAdmin seeder credentials (`admin1@gmail.com` / `Ma@22117035`). Tokens decode with `roles:["ROLE_ADMIN"]` and are accepted by gateway filters.
+- ⚠️ RabbitMQ warnings reduced to expected `client unexpectedly closed TCP connection` noise. No more `user admin invalid credentials` messages; every connection in the latest `docker compose logs --no-color rabbitmq` dump authenticates as `user 'fleet'`.
+
+### Runtime Sanity (compose up)
+- `docker compose ps` → Config, Eureka, Gateway, IAM, Issues, Vehicles, Frontend-UI, MySQL, RabbitMQ all **Up** (ships/profiles services are still restarting, tracked separately).
+- UI availability (via nginx on `http://localhost:8081`):
+  - `/` → `UI_ROOT_HTTP=200`
+  - `/login.html` → `UI_LOGIN_HTTP=200`
+  - `/signup.html` → `UI_SIGNUP_HTTP=200`
+  - `/dashboard.html` → `UI_DASH_HTTP=200`
+  - `/admin-dashboard.html` → `UI_ADMIN_DASH_HTTP=200`
+- Health endpoints:
+  - `http://localhost:8080/actuator/health` → `GW_HEALTH_HTTP=200`
+  - `http://localhost:8090/actuator/health` → `IAM_HEALTH_HTTP=200`
+  - `http://localhost:8095/actuator/health` → `VEH_HEALTH_HTTP=200`
+  - `http://localhost:8096/actuator/health` → `ISSUES_HEALTH_HTTP=200`
+
+### Automated API Regression (`bash test_apis.sh`)
+- Carrier signup → `HTTP/1.1 201` with response `{"id":22,"email":"test+1766352710@example.com","roles":["ROLE_CARRIER"]}`.
+- Driver signup → `HTTP/1.1 201` with response `{"id":23,"email":"driver+1766352710@example.com","roles":["ROLE_DRIVER"]}`.
+- Carrier signin (IAM direct) → `HTTP/1.1 200` + JWT.
+- Carrier signin (gateway 8080) → `HTTP/1.1 200 OK` + JWT (matches IAM token).
+- Admin signin (IAM) → `HTTP/1.1 200` + JWT containing `roles:["ROLE_ADMIN"]`.
+
+### Admin Flow Evidence (Gateway → IAM)
+- Sign-in request:
+  - Endpoint: `POST http://localhost:8080/api/v1/auth/signin`
+  - Status: `ADMIN_SIGNIN_STATUS_LINE: HTTP/1.1 200 OK`
+  - Body excerpt:
+    ```json
+    {
+      "id":15,
+      "email":"admin1@gmail.com",
+      "token":"<redacted>",
+      "roles":["ROLE_ADMIN"]
+    }
+    ```
+- Admin listing:
+  - Endpoint: `GET http://localhost:8080/api/v1/admin/users/admins`
+  - Status: `ADMIN_LIST_STATUS_LINE: HTTP/1.1 200 OK`
+  - Body excerpt:
+    ```json
+    [
+      {"id":11,"email":"mailadmin.eurobase@gmail.com","roles":["ROLE_ADMIN"],"enabled":true},
+      {"id":15,"email":"admin1@gmail.com","roles":["ROLE_ADMIN"],"enabled":true},
+      {"id":22,"email":"test+1766352710@example.com","roles":["ROLE_CARRIER"],"enabled":true}
+    ]
+    ```
+
+### Useful URLs (live after compose up)
+- Gateway API: `http://localhost:8080`
+- Frontend UI: `http://localhost:8081`
+- IAM direct: `http://localhost:8090`
+- Eureka dashboard: `http://localhost:8761`
+- Config Server: `http://localhost:8889`
+- RabbitMQ console: `http://localhost:15672`
+
 ## What Was Done
 
 ### 1. Configuration & Environment
 - ✅ Created `.env` from `.env.example` with proper credentials
 - ✅ Cleaned up duplicated configuration in `.env.example`
 - ✅ Verified all Spring Cloud configurations are in place
+- ✅ SuperAdmin bootstrap driven by `SUPERADMIN_USERNAME`, `SUPERADMIN_EMAIL`, `SUPERADMIN_PASSWORD` (defaults: `admin` / `admin1@gmail.com` / `Ma@22117035`). Override via env when running compose.
 
 ### 2. Security Verification
 **IAM Service (`iam-service`):**
@@ -104,6 +166,9 @@ public record SignUpResource(String email, String password, List<String> roles)
 
 ### Modified:
 - `/.env.example` - Cleaned up duplicated configuration
+- `frontend/index.html`, `login.html`, `signup.html`, `dashboard.html` - Nouveau template réactif centré sur le parcours Admin
+- `frontend/css/app.css` - Accent couleur sombre + composants (hero, admin board, badges)
+- `frontend/js/*.js` (api, config, session, dashboard) - Support des routes `/api/v1/admin/**` (liste, création, activation)
 
 ## How to Use
 
@@ -159,6 +224,14 @@ Response:
 Status: 201 Created
 Response: User object with email, roles, etc.
 ```
+
+### Admin Portal (✅)
+- Se connecter avec un compte `ROLE_ADMIN`
+- Tableaux de bord `frontend/dashboard.html` (métier) et `frontend/admin-dashboard.html` (gouvernance)
+  - Bouton Health Check (Gateway → IAM)
+  - Formulaire « Créer un administrateur » (POST `/api/v1/admin/users`)
+  - Tableau interactif (GET `/api/v1/admin/users`, PATCH `{id}/status`)
+- Décodage du JWT côté front pour révéler les rôles et afficher/masquer le panneau
 
 ### Sign-In Response (✅)
 ```
