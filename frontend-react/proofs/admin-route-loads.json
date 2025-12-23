@@ -1,0 +1,13 @@
+{
+  "timestamp": "2025-12-23T19:27:54.470Z",
+  "requestedUrl": "http://localhost:8081/admin",
+  "finalUrl": "http://localhost:8081/login",
+  "redirectedToLogin": true,
+  "hasContent": true,
+  "hasErrorBoundary": false,
+  "bodyTextLength": 333,
+  "bodyTextPreview": "Connectez-vous pour accéder à cette zone.\nFermer\n\nCONNEXION SÉCURISÉE\n\nAccès réservé\n\nLes comptes sont créés uniquement par un administrateur. Utilisez l'email reçu pour définir votre mot de passe.\n\nAccès exploitant\nAccès conducteur\nGestion administrateur\nConnexion\nEmail professionnel\nMot de passe\nS",
+  "consoleLogs": [],
+  "pageErrors": [],
+  "pageErrorsCount": 0
+}

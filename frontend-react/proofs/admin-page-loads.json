@@ -1,0 +1,30 @@
+{
+  "timestamp": "2025-12-23T19:50:03.677Z",
+  "loginUrl": "http://localhost:8081/login",
+  "finalUrl": "http://localhost:8081/admin",
+  "isOnAdminPage": true,
+  "hasContent": true,
+  "hasErrorBoundary": false,
+  "bodyTextLength": 2193,
+  "bodyTextPreview": "FleetOS\nsuperadmin@example.com\n\nResponsable plateforme\n\nCockpit\nAlertes\nExploitants\nConducteurs\nRéseau\nQualité\nParamètres\nDéconnexion\n\nVUE ADMINISTRATEUR\n\nTableau de pilotage\n\nEtat initial sans données démo. Ajoutez vos exploitants et conducteurs.\n\nSession : superadmin@example.com • Responsable plateforme\n\nDonnées en direct chargées. Source: Données directes.\n\nActualiser\nAucune donnée opérationnelle.\n\nCommencez par créer un exploitant, puis un conducteur.\n\nCréer un exploitant\nCréer un conducteur",
+  "consoleLogs": [
+    {
+      "type": "info",
+      "text": "[API] POST /v1/auth/signin -> 200"
+    },
+    {
+      "type": "error",
+      "text": "Failed to load resource: the server responded with a status of 403 (Forbidden)"
+    },
+    {
+      "type": "error",
+      "text": "Failed to load resource: the server responded with a status of 403 (Forbidden)"
+    },
+    {
+      "type": "error",
+      "text": "Failed to load resource: the server responded with a status of 400 (Bad Request)"
+    }
+  ],
+  "pageErrors": [],
+  "pageErrorsCount": 0
+}

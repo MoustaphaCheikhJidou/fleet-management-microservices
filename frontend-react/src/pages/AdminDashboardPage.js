@@ -14,10 +14,14 @@ import { safeFetch } from '../services/api.js';
 import { ENDPOINTS } from '../services/config.js';
 
 const adminMenu = ['Cockpit', 'Alertes', 'Exploitants', 'Conducteurs', 'Réseau', 'Qualité', 'Paramètres'];
-        console.debug('[admin] inviteAdmin failed', error);
-        setActionMessage(formatInviteError(error));
 const isEmail = (value) => /.+@.+\..+/.test((value || '').trim());
 const chartPalette = ['#1cc8ee', '#64ed9d', '#f2a900', '#ff7a88', '#9d7aff', '#6bd5ff'];
+const zeroDays = ['Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam', 'Dim'];
+const periodFilters = ['7j', '30j', '90j'];
+const severityFilters = ['Toutes', 'Critique', 'Majeure', 'Mineure'];
+const statusFilters = ['Tous', 'Ouverte', 'En cours', 'Résolue'];
+const fleetRanges = ['Toutes', '<30', '30-60', '60+'];
+const driverStatuses = ['Tous', 'Actif', 'Inactif', 'En mission'];
 
 function useAdminCharts(series) {
   const dailyRef = React.useRef(null);

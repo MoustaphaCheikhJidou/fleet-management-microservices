@@ -52,3 +52,13 @@ PHASE 4 ✅ (cockpit admin mock validé : KPIs, 2 graphiques, 5 tables, filtres,
 
 ## INVITE SMOKE
 - INVITE SMOKE: ✅ iam_invite_smoke.sh exit 0 (signin ROLE_ADMIN, invite 200, mailhog found)
+
+## UI FIX — Admin page runtime errors (fleetRanges, driverStatuses)
+- Cause: `fleetRanges is not defined` (and `driverStatuses`, `periodFilters`, `severityFilters`, `statusFilters`) in AdminDashboardPage.js
+- Fix: Added missing constants at lines 19-24 in AdminDashboardPage.js
+- ErrorBoundary: Added to main.js for safer error display
+- Validation:
+  - prove_admin_page_loads.js: ✅ (EXIT 0, pageErrorsCount=0)
+  - prove_admin_charts_never_disappear.js: ✅ (EXIT 0, pageErrorsCount=0)
+  - scan_forbidden.py: ✅
+- Artefacts: frontend-react/proofs/admin-page-loads.(png|json)
