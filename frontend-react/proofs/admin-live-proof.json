@@ -1,0 +1,8 @@
+{
+  "redirectedToLogin": true,
+  "unauthUrl": "http://localhost:8082/login",
+  "authUrl": "http://localhost:8082/admin",
+  "statusNote": "Données de démonstration prêtes. Source: Démonstration.",
+  "source": "mock",
+  "screenshot": "/tmp/admin-live-proof.png"
+}

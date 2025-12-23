@@ -1,14 +1,18 @@
 package com.iam.service.domain.model.aggregates;
 
 import com.iam.service.domain.model.entities.Role;
+import com.iam.service.domain.model.valueobjects.AccountStatus;
 import com.iam.service.shared.domain.model.aggregates.AuditableAbstractAggregateRoot;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
+import jakarta.persistence.PrePersist;
+import jakarta.persistence.PreUpdate;
 import lombok.Getter;
 import lombok.Setter;
 
+import java.time.Instant;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -28,8 +32,8 @@ public class User extends AuditableAbstractAggregateRoot<User> {
     @Column(unique = true)
     private String username;
 
-    @NotBlank
     @Size(max = 120)
+    @Column(nullable = true)
     private String password;
 
     @ManyToMany(fetch = FetchType.EAGER, cascade = CascadeType.ALL)
@@ -43,6 +47,47 @@ public class User extends AuditableAbstractAggregateRoot<User> {
 
     @Column(nullable = false)
     private boolean enabled = true;
+
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, length = 32)
+    private AccountStatus status = AccountStatus.INVITED;
+
+    @Size(max = 160)
+    private String fullName;
+
+    @Size(max = 120)
+    private String city;
+
+    @Size(max = 120)
+    private String company;
+
+    @Size(max = 40)
+    private String phone;
+
+    @Column(name = "fleet_size")
+    private Integer fleetSize;
+
+    @Size(max = 120)
+    private String vehicle;
+
+    @Column(name = "reset_token_hash", length = 160)
+    private String resetTokenHash;
+
+    @Column(name = "reset_token_signature", length = 128)
+    private String resetTokenSignature;
+
+    @Column(name = "reset_token_expiry")
+    private Instant resetTokenExpiry;
+
+    @Column(name = "reset_token_used")
+    private Boolean resetTokenUsed = false;
+
+    @Column(name = "reset_token_used_at")
+    private Instant resetTokenUsedAt;
+
+    public boolean isResetTokenUsed() {
+        return Boolean.TRUE.equals(this.resetTokenUsed);
+    }
 
     /**
      * Default constructor.
@@ -125,5 +170,25 @@ public class User extends AuditableAbstractAggregateRoot<User> {
         var validatedRoles = Role.validateRoleSet(roles);
         this.roles.addAll(validatedRoles);
         return this;
+    }
+
+    @PrePersist
+    @PreUpdate
+    public void ensureDefaults() {
+        if (this.username == null || this.username.isBlank()) {
+            this.username = this.email;
+        }
+        if (this.status == null) {
+            this.status = AccountStatus.INVITED;
+        }
+        if (this.enabled && this.status == AccountStatus.DISABLED) {
+            this.enabled = false;
+        }
+        if (!this.enabled && this.status == AccountStatus.ACTIVE) {
+            this.status = AccountStatus.DISABLED;
+        }
+        if (this.resetTokenUsed == null) {
+            this.resetTokenUsed = false;
+        }
     }
 }

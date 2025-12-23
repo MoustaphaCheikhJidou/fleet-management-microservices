@@ -3,3 +3,22 @@ spring:
     name: iam-service
   config:
     import: optional:configserver:http://config-service:8888
+  flyway:
+    enabled: false
+    baseline-on-migrate: true
+    baseline-version: 0
+    locations: classpath:db/migration
+  mail:
+    host: ${SPRING_MAIL_HOST:mailhog}
+    port: ${SPRING_MAIL_PORT:1025}
+    username: ${SPRING_MAIL_USERNAME:}
+    password: ${SPRING_MAIL_PASSWORD:}
+    properties:
+      mail.smtp.auth: false
+      mail.smtp.starttls.enable: false
+
+app:
+  mail:
+    from: ${APP_MAIL_FROM:no-reply@fleetos.local}
+  frontend:
+    base-url: ${APP_FRONTEND_BASE_URL:http://localhost:8081}

@@ -27,14 +27,19 @@ public class RoleAuthorizationFilter extends AbstractGatewayFilterFactory<RoleAu
         return (exchange, chain) -> {
             ServerHttpRequest request = exchange.getRequest();
             String rolesHeader = request.getHeaders().getFirst("X-User-Roles");
+            String authHeader = request.getHeaders().getFirst("Authorization");
             String path = request.getURI().getPath();
-            // Defensive: if no roles header and this is an authentication endpoint, allow through.
-            if (rolesHeader == null) {
-                if (path != null && path.startsWith("/api/v1/authentication")) {
-                    return chain.filter(exchange);
-                }
-                return unauthorizedResponse(exchange);
+
+            // Allow authentication endpoints and any request that already carries a JWT Authorization header.
+            if (path != null && path.startsWith("/api/v1/authentication")) {
+                return chain.filter(exchange);
             }
+            if (authHeader != null && !authHeader.isBlank()) {
+                return chain.filter(exchange);
+            }
+
+            // Legacy fallback: allow role-based access via X-User-Roles header when present.
+            if (rolesHeader == null) { return unauthorizedResponse(exchange); }
             List<String> userRoles = Arrays.asList(rolesHeader.split(","));
             boolean hasRequiredRole = false;
             for (String requiredRole : config.getRoles()) {

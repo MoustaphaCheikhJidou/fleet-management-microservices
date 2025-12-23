@@ -1,0 +1,20 @@
+{
+  "cssHttpStatus": 200,
+  "cssContentType": "text/css",
+  "proof": {
+    "mutedTextVar": "rgba(241, 245, 255, 0.65)",
+    "bodyBgColor": "rgb(5, 11, 24)",
+    "bodyBgImage": "linear-gradient(120deg, rgb(3, 11, 25), rgb(10, 26, 50) 40%, rgb(5, 11, 24))",
+    "bodyColor": "rgb(241, 245, 255)",
+    "bodyFont": "Sora, \"Space Grotesk\", system-ui, -apple-system, \"system-ui\", sans-serif",
+    "shell": {
+      "selector": ".app-shell",
+      "bgColor": "rgb(5, 11, 24)",
+      "bgImage": "none",
+      "color": "rgb(241, 245, 255)",
+      "font": "Sora, \"Space Grotesk\", system-ui, -apple-system, \"system-ui\", sans-serif"
+    }
+  },
+  "url": "http://localhost:8082/login",
+  "screenshot": "/tmp/admin-styles-proof.png"
+}

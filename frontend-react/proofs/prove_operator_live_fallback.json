@@ -1,0 +1,19 @@
+{
+  "url": "http://localhost:8081/dashboard",
+  "titlePresent": true,
+  "statusText": "Sources indisponibles, affichage de démonstration. Source: Démonstration",
+  "statusLive": false,
+  "statusDemo": true,
+  "kpiCount": 4,
+  "tableCount": 5,
+  "menuButtons": [
+    "Cockpit",
+    "Alertes",
+    "Missions",
+    "Flotte",
+    "Conducteurs",
+    "Factures",
+    "Paramètres"
+  ],
+  "screenshot": "/tmp/operator-live-fallback.png"
+}

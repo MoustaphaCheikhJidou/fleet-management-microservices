@@ -16,13 +16,12 @@
     <div class="auth-shell auth-shell--reverse">
       <section class="auth-panel" aria-labelledby="signup-heading">
         <header>
-          <p class="eyebrow">Application Distribuée de Gestion d’un Parc Automobile</p>
-          <h2 id="signup-heading">Créer un compte opérateur (Carrier ou Driver)</h2>
-          <p>Les inscriptions publiques n’autorisent que les rôles métiers terrain. Les administrateurs restent gérés depuis
-            le portail backend pour éviter toute élévation de privilèges.</p>
+          <p class="eyebrow">Plateforme FleetOS</p>
+          <h2 id="signup-heading">Créer un compte</h2>
+          <p>Réservez cet espace aux équipes terrain : Exploitants et Conducteurs gèrent leurs activités depuis ce portail.</p>
         </header>
         <div class="auth-panel__card">
-          <p class="field-note">Les données sont stockées dans MySQL via IAM-service. Une confirmation apparaît ci-dessous.</p>
+          <p class="field-note">Renseignez votre email professionnel pour rejoindre la communauté FleetOS.</p>
           <form id="signupForm" class="form-grid form-grid--stacked">
             <div class="form-field">
               <label class="form-label" for="signupEmail">Email professionnel</label>
@@ -51,16 +50,16 @@
             </div>
 
             <div class="form-field">
-              <label class="form-label" for="signupRole">Rôle principal autorisé</label>
+              <label class="form-label" for="signupRole">Rôle</label>
               <select class="form-select" name="role" id="signupRole" required>
-                <option value="ROLE_CARRIER">Client Exploitant (ROLE_CARRIER)</option>
-                <option value="ROLE_DRIVER">Conducteur terrain (ROLE_DRIVER)</option>
+                <option value="ROLE_CARRIER">Exploitant (Carrier)</option>
+                <option value="ROLE_DRIVER">Conducteur (Driver)</option>
               </select>
-              <p class="field-note" role="note">L’auto-inscription est limitée à ces rôles métiers.</p>
+              <p class="field-note" role="note">Ces deux rôles donnent accès aux outils métier adaptés.</p>
             </div>
 
             <div class="notice-card" role="note">
-              <strong>Important :</strong> Les comptes administrateur sont créés uniquement par un administrateur connecté via admin-dashboard.html.
+              <strong>Administrateur :</strong> les comptes administrateur sont créés par l’équipe FleetOS depuis le portail dédié.
             </div>
 
             <button class="primary-button" type="submit">Créer un compte</button>
@@ -71,20 +70,19 @@
       </section>
 
       <section class="auth-hero">
-        <p class="eyebrow">Flux IAM</p>
-        <h1>Chaque inscription alimente la plateforme FleetOS.</h1>
+        <p class="eyebrow">Gestion de parc automobile</p>
+        <h1>Donnez de la visibilité à vos équipes.</h1>
         <p>
-          Les événements `iam.users.created` alimentent Profiles, Vehicles et Issues pour exposer immédiatement le nouveau membre
-          dans les tableaux de bord. Le provisioning reste piloté par Eureka et Config Server.
+          Une fois inscrit, vous suivez vos missions, vos véhicules et vos alertes dans un environnement pensé pour les
+          exploitants et les conducteurs.
         </p>
         <ul class="badge-stack badge-stack--columns">
-          <li>Validation Spring Boot</li>
-          <li>JWT enrichi & diffusion RabbitMQ</li>
-          <li>Monitoring Actuator prêt</li>
+          <li>Suivi des véhicules</li>
+          <li>Gestion des alertes</li>
+          <li>Collaboration temps réel</li>
         </ul>
         <div class="notice-card notice-card--inline" role="note">
-          <strong>Astuce :</strong> lancez `docker compose up -d --build` avant de tester afin que Gateway, IAM, Vehicles et Issues
-          soient tous enregistrés dans Eureka.
+          <strong>Besoin d’aide ?</strong> L’équipe FleetOS peut accompagner vos collaborateurs pour finaliser leur accès.
         </div>
       </section>
     </div>

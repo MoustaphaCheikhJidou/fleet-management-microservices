@@ -1,0 +1,35 @@
+{
+  "url": "http://localhost:8081/admin",
+  "chartsBefore": {
+    "daily": 7,
+    "type": 5,
+    "canvasOk": true
+  },
+  "chartsAfter": {
+    "daily": 7,
+    "type": 5,
+    "seedCarriers": 1,
+    "seedDrivers": 1,
+    "seedAlerts": 0
+  },
+  "canvasVisible": true,
+  "carriersRowsBefore": 0,
+  "carriersRowsAfter": 1,
+  "driversRowsBefore": 0,
+  "driversRowsAfter": 1,
+  "blockerVisibleAfter": false,
+  "kpis": [
+    1,
+    1,
+    12,
+    0,
+    0,
+    0
+  ],
+  "emptyStateVisible": true,
+  "blockerVisible": true,
+  "consoleErrorsCount": 0,
+  "consoleErrors": [],
+  "pageErrorsCount": 0,
+  "pageErrors": []
+}

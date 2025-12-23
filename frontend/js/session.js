@@ -41,7 +41,7 @@ function decodeTokenPayload(token) {
     );
     return JSON.parse(jsonPayload);
   } catch (error) {
-    console.warn('Impossible de décoder le token JWT', error);
+    console.warn('Impossible de décoder le jeton', error);
     return null;
   }
 }
@@ -63,7 +63,16 @@ export function resolveLandingRoute(roles = getRoles()) {
   if (!Array.isArray(roles) || roles.length === 0) {
     return 'dashboard.html';
   }
-  return roles.includes('ROLE_ADMIN') ? 'admin-dashboard.html' : 'dashboard.html';
+  if (roles.includes('ROLE_ADMIN')) {
+    return 'admin-dashboard.html';
+  }
+  if (roles.includes('ROLE_CARRIER')) {
+    return 'dashboard.html?role=carrier';
+  }
+  if (roles.includes('ROLE_DRIVER')) {
+    return 'dashboard.html?role=driver';
+  }
+  return 'dashboard.html';
 }
 
 export function requireSession() {

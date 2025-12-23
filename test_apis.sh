@@ -4,8 +4,8 @@ EMAIL=${TEST_EMAIL:-"test+$(date +%s)@example.com"}
 PASSWORD=${TEST_PASSWORD:-"TestPassword123"}
 DRIVER_EMAIL=${TEST_DRIVER_EMAIL:-"driver+$(date +%s)@example.com"}
 DRIVER_PASSWORD=${TEST_DRIVER_PASSWORD:-"DriverPassword123"}
-ADMIN_EMAIL=${ADMIN_EMAIL:-${SUPERADMIN_EMAIL:-"admin1@gmail.com"}}
-ADMIN_PASSWORD=${ADMIN_PASSWORD:-${SUPERADMIN_PASSWORD:-"Ma@22117035"}}
+ADMIN_EMAIL=${ADMIN_EMAIL:-${SUPERADMIN_EMAIL:-"superadmin@example.com"}}
+ADMIN_PASSWORD=${ADMIN_PASSWORD:-${SUPERADMIN_PASSWORD:-"ChangeMe_Admin!123"}}
 
 echo "Using carrier credentials -> email: ${EMAIL}, password: ${PASSWORD}"
 echo "Using driver credentials -> email: ${DRIVER_EMAIL}, password: ${DRIVER_PASSWORD}"

@@ -47,4 +47,12 @@ public interface UserRepository extends JpaRepository<User, Long> {
      * @return true if the username already exists.
      */
     boolean existsByUsername(String username);
+
+    /**
+     * Find a user by reset token signature.
+     *
+     * @param resetTokenSignature hashed signature used for lookup
+     * @return optional user
+     */
+    Optional<User> findByResetTokenSignature(String resetTokenSignature);
 }

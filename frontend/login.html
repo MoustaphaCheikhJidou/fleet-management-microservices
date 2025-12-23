@@ -15,45 +15,44 @@
   <body class="ui-body">
     <div class="auth-shell">
       <section class="auth-hero">
-        <p class="eyebrow">Application Distribuée de Gestion d’un Parc Automobile</p>
-        <h1>Console sécurisée FleetOS</h1>
+        <p class="eyebrow">Plateforme FleetOS</p>
+        <h1>Connexion</h1>
         <p>
-          Accédez au cockpit IAM + Gateway pour piloter les services véhicules, conducteurs et incidents. Chaque connexion
-          transite par http://localhost:8080 et aboutit sur un JWT signé contenant vos rôles métiers.
+          Accédez à votre tableau de bord de gestion de parc automobile pour suivre les véhicules, missions, alertes et équipes en
+          temps réel.
         </p>
         <div class="auth-checklist">
           <article class="auth-checklist__item">
-            <h3>IAM (8090)</h3>
-            <p>Contrôles d’identité, hashing BCrypt et SuperAdmin injecté via SUPERADMIN_*.</p>
+            <h3>Véhicules</h3>
+            <p>Visualisez l’état du parc, les disponibilités et les besoins de maintenance.</p>
           </article>
           <article class="auth-checklist__item">
-            <h3>Gateway (8080)</h3>
-            <p>Routes `/api/v1/**`, filtre JWT + rôles, forwarding Eureka.</p>
+            <h3>Alertes</h3>
+            <p>Priorisez les incidents critiques et informez vos équipes en quelques clics.</p>
           </article>
           <article class="auth-checklist__item">
-            <h3>Front (8081)</h3>
-            <p>Nginx sert les écrans opérateurs/admin intégrés depuis le template responsive.</p>
+            <h3>Équipe</h3>
+            <p>Coordonnez exploitants et conducteurs autour d’une vision partagée.</p>
           </article>
         </div>
         <ul class="badge-stack badge-stack--columns">
-          <li>JWT multi-rôles</li>
-          <li>Spring Cloud Config</li>
-          <li>Observabilité Actuator</li>
+          <li>Accès sécurisé</li>
+          <li>Suivi temps réel</li>
+          <li>Alertes intelligentes</li>
         </ul>
         <div class="notice-card notice-card--inline" role="note">
-          <strong>Rappel :</strong> les comptes administrateur sont créés par un SuperAdmin ou via le portail admin, jamais via
-          l’inscription publique.
+          <strong>Important :</strong> les comptes administrateur sont créés depuis le portail dédié par l’équipe FleetOS.
         </div>
       </section>
 
       <section class="auth-panel" aria-labelledby="login-heading">
         <header>
-          <p class="eyebrow">Centre d’identité IAM</p>
-          <h2 id="login-heading">Connexion opérateurs & administrateurs</h2>
-          <p>Vos requêtes transitent par Gateway (8080) puis IAM vérifie l’email, le mot de passe et signe un JWT.</p>
+          <p class="eyebrow">Accès sécurisé</p>
+          <h2 id="login-heading">Identifiez-vous</h2>
+          <p>Utilisez votre email professionnel pour rejoindre votre espace Exploitant, Conducteur ou Administrateur.</p>
         </header>
         <div class="auth-panel__card">
-          <p class="field-note">Identifiant requis : email professionnel déclaré dans Profiles Service.</p>
+          <p class="field-note">Vos identifiants permettent de retrouver immédiatement vos véhicules, missions et alertes.</p>
           <form id="loginForm" class="form-grid form-grid--stacked">
             <div class="form-field">
               <label class="form-label" for="loginEmail">Email professionnel</label>
@@ -79,14 +78,13 @@
                 minlength="8"
                 autocomplete="current-password"
               />
-              <p class="field-note">Les mots de passe sont stockés en BCrypt (PasswordEncoder).</p>
             </div>
 
             <button class="primary-button" type="submit">Connexion</button>
           </form>
           <p id="loginStatus" class="status-text" role="status" aria-live="polite"></p>
           <p class="auth-alt">
-            Besoin d’un compte opérateur ? <a href="signup.html" class="ghost-link">Créer un profil Carrier ou Driver</a>
+            Besoin d’un compte opérateur ? <a href="signup.html" class="ghost-link">Créer un compte Exploitant ou Conducteur</a>
           </p>
         </div>
       </section>

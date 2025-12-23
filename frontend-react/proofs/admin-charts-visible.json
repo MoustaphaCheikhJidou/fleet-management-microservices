@@ -1,0 +1,24 @@
+{
+  "url": "http://localhost:8081/admin",
+  "chartsCount": 2,
+  "barsCount": 12,
+  "firstBarStyle": {
+    "display": "flex",
+    "visibility": "visible",
+    "opacity": "1",
+    "width": 67.8125,
+    "height": 90,
+    "background": "rgba(0, 0, 0, 0)"
+  },
+  "chartStyle": {
+    "display": "flex",
+    "visibility": "visible",
+    "opacity": "1",
+    "width": 364,
+    "height": 180,
+    "background": "rgba(0, 0, 0, 0)"
+  },
+  "hasChartSection": true,
+  "bodyBg": "rgb(5, 11, 24)",
+  "anyPageBanner": "Données de démonstration prêtes. Source: Démonstration."
+}

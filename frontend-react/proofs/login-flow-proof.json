@@ -1,0 +1,16 @@
+{
+  "url": "http://localhost:8081/admin",
+  "sessionKey": "fleet-react-session",
+  "session": {
+    "raw": "{\"token\":\"eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJzdXBlcmFkbWluQGV4YW1wbGUuY29tIiwiaWF0IjoxNzY2NDkwOTYwLCJleHAiOjE3NjcwOTU3NjAsImlkIjoxLCJyb2xlcyI6WyJST0xFX0FETUlOIl19.kyAwrC-o_C54ADe8IhNh-_tsryaPT9JTl_4cnJWWUi4\",\"email\":\"superadmin@example.com\",\"roles\":[\"ROLE_ADMIN\"]}",
+    "parsed": {
+      "token": "eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJzdXBlcmFkbWluQGV4YW1wbGUuY29tIiwiaWF0IjoxNzY2NDkwOTYwLCJleHAiOjE3NjcwOTU3NjAsImlkIjoxLCJyb2xlcyI6WyJST0xFX0FETUlOIl19.kyAwrC-o_C54ADe8IhNh-_tsryaPT9JTl_4cnJWWUi4",
+      "email": "superadmin@example.com",
+      "roles": [
+        "ROLE_ADMIN"
+      ]
+    },
+    "hasToken": true
+  },
+  "screenshot": "/tmp/login-flow-proof.png"
+}

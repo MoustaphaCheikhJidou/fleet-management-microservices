@@ -40,6 +40,14 @@ services:
       interval: 10s
       start_period: 60s
 
+  # MailHog for SMTP testing
+  mailhog:
+    image: mailhog/mailhog:v1.0.1
+    container_name: fleet-mailhog
+    ports:
+      - "1025:1025"
+      - "8025:8025"
+
   # Configuration Server (debe arrancar PRIMERO)
   config-service:
     build:
@@ -88,8 +96,13 @@ services:
       - MYSQL_ROOT_PASSWORD=${MYSQL_ROOT_PASSWORD}
       - RABBITMQ_DEFAULT_USER=${RABBITMQ_DEFAULT_USER}
       - RABBITMQ_DEFAULT_PASS=${RABBITMQ_DEFAULT_PASS}
-      - IAM_ADMIN_EMAIL=${IAM_ADMIN_EMAIL:-mailadmin.eurobase@gmail.com}
-      - IAM_ADMIN_PASSWORD=${IAM_ADMIN_PASSWORD:-1234}
+      - IAM_ADMIN_USERNAME=${IAM_ADMIN_USERNAME:-superadmin}
+      - IAM_ADMIN_EMAIL=${IAM_ADMIN_EMAIL:-superadmin@example.com}
+      - IAM_ADMIN_PASSWORD=${IAM_ADMIN_PASSWORD:-ChangeMe_Admin!123}
+      - SPRING_MAIL_HOST=mailhog
+      - SPRING_MAIL_PORT=1025
+      - APP_MAIL_FROM=${APP_MAIL_FROM:-no-reply@fleetos.local}
+      - APP_FRONTEND_BASE_URL=${APP_FRONTEND_BASE_URL:-http://localhost:8081}
     depends_on:
       eureka-service:
         condition: service_healthy
@@ -97,6 +110,8 @@ services:
         condition: service_healthy
       rabbitmq:
         condition: service_healthy
+      mailhog:
+        condition: service_started
     ports:
       - "8090:8090"
     restart: unless-stopped
@@ -229,6 +244,20 @@ services:
       context: ./frontend
       dockerfile: Dockerfile
     container_name: fleet-frontend-ui
+    depends_on:
+      gateway-service:
+        condition: service_started
+    ports:
+      - "8083:80"
+    restart: unless-stopped
+
+  frontend-react-ui:
+    build:
+      context: ./frontend-react
+      dockerfile: Dockerfile
+    container_name: fleet-frontend-react-ui
+    environment:
+      - GATEWAY_PORT=8080
     depends_on:
       gateway-service:
         condition: service_started

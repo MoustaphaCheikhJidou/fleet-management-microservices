@@ -2,10 +2,12 @@ package com.iam.service.interfaces.rest;
 
 import com.iam.service.domain.services.UserCommandService;
 import com.iam.service.interfaces.rest.resources.AuthenticatedUserResource;
+import com.iam.service.interfaces.rest.resources.ResetPasswordResource;
 import com.iam.service.interfaces.rest.resources.SignInResource;
 import com.iam.service.interfaces.rest.resources.SignUpResource;
 import com.iam.service.interfaces.rest.resources.UserResource;
 import com.iam.service.interfaces.rest.transform.AuthenticatedUserResourceFromEntityAssembler;
+import com.iam.service.interfaces.rest.transform.ResetPasswordCommandFromResourceAssembler;
 import com.iam.service.interfaces.rest.transform.SignInCommandFromResourceAssembler;
 import com.iam.service.interfaces.rest.transform.SignUpCommandFromResourceAssembler;
 import com.iam.service.interfaces.rest.transform.UserResourceFromEntityAssembler;
@@ -44,26 +46,9 @@ public class AuthenticationController {
             @ApiResponse(responseCode = "400", description = "Bad request.")
     })
     public ResponseEntity<?> signUp(@RequestBody SignUpResource resource) {
-        log.info("Sign-up request for email={}", resource.email());
-        try {
-            var signUpCommand = SignUpCommandFromResourceAssembler.toCommandFromResource(resource);
-            var user = userCommandService.handle(signUpCommand);
-            if (user.isEmpty()) {
-                return ResponseEntity.badRequest().body(Map.of("message", "Création du compte impossible."));
-            }
-            var userEntity = user.get();
-            var userResource = UserResourceFromEntityAssembler.toResourceFromEntity(userEntity);
-            log.info("Sign-up successful for email={}", resource.email());
-            return new ResponseEntity<>(userResource, HttpStatus.CREATED);
-        } catch (ResponseStatusException ex) {
-            log.warn("Sign-up rejected for email={} due to {}", resource.email(), ex.getReason());
-            return ResponseEntity.status(ex.getStatusCode())
-                    .body(Map.of("message", ex.getReason()));
-        } catch (RuntimeException ex) {
-            log.error("Unexpected error during sign-up for email={}", resource.email(), ex);
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                    .body(Map.of("message", ex.getMessage()));
-        }
+        log.info("Sign-up disabled request for email={}", resource.email());
+        return ResponseEntity.status(HttpStatus.GONE)
+                .body(Map.of("message", "Création de compte désactivée : contactez un administrateur."));
     }
 
     @PostMapping({"/sign-in", "/signin"})
@@ -74,12 +59,40 @@ public class AuthenticationController {
     })
     public ResponseEntity<AuthenticatedUserResource> signIn(@RequestBody SignInResource resource) {
         log.info("Sign-in request for email={}", resource.email());
-        var signInCommand = SignInCommandFromResourceAssembler.toCommandFromResource(resource);
-        var authenticatedUserResult = userCommandService.handle(signInCommand);
-        if (authenticatedUserResult.isEmpty()) return ResponseEntity.notFound().build();
-        var authenticatedUser = authenticatedUserResult.get();
-        var authenticatedUserResource = AuthenticatedUserResourceFromEntityAssembler.toResourceFromEntity(authenticatedUser.left, authenticatedUser.right);
-        log.info("Sign-in successful for email={}", resource.email());
-        return ResponseEntity.ok(authenticatedUserResource);
+        try {
+            var signInCommand = SignInCommandFromResourceAssembler.toCommandFromResource(resource);
+            var authenticatedUserResult = userCommandService.handle(signInCommand);
+            if (authenticatedUserResult.isEmpty()) return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+            var authenticatedUser = authenticatedUserResult.get();
+            var authenticatedUserResource = AuthenticatedUserResourceFromEntityAssembler.toResourceFromEntity(authenticatedUser.left, authenticatedUser.right);
+            log.info("Sign-in successful for email={}", resource.email());
+            return ResponseEntity.ok(authenticatedUserResource);
+        } catch (ResponseStatusException ex) {
+            log.warn("Sign-in refused for email={} cause={}", resource.email(), ex.getReason());
+            return ResponseEntity.status(ex.getStatusCode()).body(new AuthenticatedUserResource(null, null, null, null));
+        }
+    }
+
+    @PostMapping({"/reset-password"})
+    @Operation(summary = "Reset/activate password", description = "Complete password reset from a one-time token")
+    public ResponseEntity<?> resetPassword(@RequestBody ResetPasswordResource resource) {
+        if (!resource.newPassword().equals(resource.confirmPassword())) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(Map.of("message", "Les mots de passe ne correspondent pas."));
+        }
+
+        try {
+            var command = ResetPasswordCommandFromResourceAssembler.toCommandFromResource(resource);
+            var user = userCommandService.handle(command);
+            if (user.isEmpty()) {
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                        .body(Map.of("message", "Lien expiré ou invalide"));
+            }
+            var userResource = UserResourceFromEntityAssembler.toResourceFromEntity(user.get());
+            return ResponseEntity.ok(userResource);
+        } catch (ResponseStatusException ex) {
+            return ResponseEntity.status(ex.getStatusCode())
+                    .body(Map.of("message", ex.getReason()));
+        }
     }
 }

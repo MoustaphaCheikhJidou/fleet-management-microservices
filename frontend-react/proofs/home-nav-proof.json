@@ -1,0 +1,7 @@
+{
+  "loginUrl": "http://localhost:8081/login",
+  "loginHeading": "Connexion",
+  "signupUrl": "http://localhost:8081/signup",
+  "signupHeading": "Inscription",
+  "screenshot": "/tmp/home-nav-proof.png"
+}

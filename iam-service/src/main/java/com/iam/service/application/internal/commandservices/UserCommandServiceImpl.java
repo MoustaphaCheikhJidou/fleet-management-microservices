@@ -1,32 +1,45 @@
 package com.iam.service.application.internal.commandservices;
 
 import com.iam.service.application.internal.outboundservices.hashing.HashingService;
+import com.iam.service.application.internal.outboundservices.mail.MailNotificationService;
 import com.iam.service.application.internal.outboundservices.tokens.TokenService;
 import com.iam.service.domain.model.aggregates.User;
 import com.iam.service.domain.model.commands.ChangeEmailCommand;
 import com.iam.service.domain.model.commands.ChangePasswordCommand;
 import com.iam.service.domain.model.commands.CreateAdminUserCommand;
+import com.iam.service.domain.model.commands.InviteUserCommand;
+import com.iam.service.domain.model.commands.RegisterCarrierCommand;
+import com.iam.service.domain.model.commands.ResendInviteCommand;
+import com.iam.service.domain.model.commands.ResetPasswordWithTokenCommand;
 import com.iam.service.domain.model.commands.SignInCommand;
 import com.iam.service.domain.model.commands.SignUpCommand;
-import com.iam.service.domain.model.commands.RegisterCarrierCommand;
 import com.iam.service.domain.model.commands.UpdateUserStatusCommand;
 import com.iam.service.domain.model.events.UserCreatedEvent;
+import com.iam.service.domain.model.valueobjects.AccountStatus;
 import com.iam.service.domain.model.valueobjects.Roles;
 import com.iam.service.domain.services.UserCommandService;
 import com.iam.service.infrastructure.persistence.jpa.repositories.RoleRepository;
 import com.iam.service.infrastructure.persistence.jpa.repositories.UserRepository;
-import org.springframework.http.HttpStatus;
 import org.apache.commons.lang3.tuple.ImmutablePair;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.http.HttpStatus;
 import org.springframework.cloud.stream.function.StreamBridge;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
 
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
+import java.security.SecureRandom;
+import java.time.Duration;
+import java.time.Instant;
+import java.util.Base64;
 import java.util.EnumSet;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
+import java.util.UUID;
 import java.util.stream.Collectors;
 
 /**
@@ -41,12 +54,15 @@ import java.util.stream.Collectors;
 public class UserCommandServiceImpl implements UserCommandService {
     private static final Logger log = LoggerFactory.getLogger(UserCommandServiceImpl.class);
     private static final Set<Roles> SELF_REGISTRATION_ROLES = EnumSet.of(Roles.ROLE_CARRIER, Roles.ROLE_DRIVER);
+    private static final Duration INVITE_TOKEN_TTL = Duration.ofMinutes(90);
 
     private final UserRepository userRepository;
     private final RoleRepository roleRepository;
     private final HashingService hashingService;
     private final TokenService tokenService;
     private final StreamBridge streamBridge;
+    private final MailNotificationService mailNotificationService;
+    private final SecureRandom secureRandom = new SecureRandom();
 
     /**
      * Constructor.
@@ -56,51 +72,38 @@ public class UserCommandServiceImpl implements UserCommandService {
      * @param hashingService the {@link HashingService} hashing service.
      * @param tokenService the {@link TokenService} token service.
      */
-    public UserCommandServiceImpl(UserRepository userRepository, RoleRepository roleRepository, HashingService hashingService, TokenService tokenService, StreamBridge streamBridge) {
+    public UserCommandServiceImpl(UserRepository userRepository, RoleRepository roleRepository, HashingService hashingService, TokenService tokenService, StreamBridge streamBridge, MailNotificationService mailNotificationService) {
         this.userRepository = userRepository;
         this.roleRepository = roleRepository;
         this.hashingService = hashingService;
         this.tokenService = tokenService;
         this.streamBridge = streamBridge;
+        this.mailNotificationService = mailNotificationService;
     }
 
     // inherited javadoc
     @Override
     public Optional<User> handle(SignUpCommand command) {
-        if (userRepository.existsByEmail(command.username())) {
-            throw new ResponseStatusException(HttpStatus.CONFLICT, "Email déjà utilisé");
-        }
-        var roles = command.roles().stream()
-            .map(role -> roleRepository.findByName(role.getName())
-                .orElseThrow(() -> new RuntimeException("Role name not found")))
-            .peek(role -> {
-                if (role.getName() == Roles.ROLE_ADMIN) {
-                    throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Inscription administrateur interdite");
-                }
-            })
-            .filter(role -> SELF_REGISTRATION_ROLES.contains(role.getName()))
-            .collect(Collectors.toList());
-
-        if (roles.isEmpty()) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Inscription limitée aux profils Exploitant ou Conducteur");
-        }
-        var user = new User(command.username(), hashingService.encode(command.password()), roles);
-        var savedUser = userRepository.save(user);
-
-        publishUserCreatedEvent(savedUser, "self-signup");
-        return Optional.of(savedUser);
+        throw new ResponseStatusException(HttpStatus.GONE, "Inscription désactivée : contactez un administrateur.");
     }
 
 
     @Override
     public Optional<ImmutablePair<User, String>> handle(SignInCommand command) {
         var user = userRepository.findByEmail(command.username())
-                .orElseThrow(() -> new RuntimeException("Email not found"));
-        if (!user.isEnabled()) {
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Compte désactivé");
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Email ou mot de passe incorrect."));
+
+        if (user.getStatus() == AccountStatus.PENDING_ACTIVATION || user.getStatus() == AccountStatus.INVITED) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Compte non activé — consultez votre email pour définir votre mot de passe.");
         }
-        if (!hashingService.matches(command.password(), user.getPassword()))
-            throw new RuntimeException("Invalid password");
+
+        if (user.getStatus() == AccountStatus.DISABLED || !user.isEnabled()) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Compte désactivé.");
+        }
+
+        if (user.getPassword() == null || !hashingService.matches(command.password(), user.getPassword())) {
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Email ou mot de passe incorrect.");
+        }
         var token = tokenService.generateToken(user.getEmail());
         return Optional.of(new ImmutablePair<>(user, token));
     }
@@ -220,6 +223,155 @@ public class UserCommandServiceImpl implements UserCommandService {
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Utilisateur introuvable"));
         user.setEnabled(command.enabled());
         var savedUser = userRepository.save(user);
+        return Optional.of(savedUser);
+    }
+
+    private void validateInviteCommand(InviteUserCommand command) {
+        if (command.email() == null || command.email().isBlank()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Email requis");
+        }
+        if (command.role() == null || (!EnumSet.of(Roles.ROLE_CARRIER, Roles.ROLE_DRIVER, Roles.ROLE_ADMIN).contains(command.role()))) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Création limitée aux profils Exploitant, Conducteur ou Administrateur");
+        }
+    }
+
+    private String generateSecureToken() {
+        byte[] buffer = new byte[48];
+        secureRandom.nextBytes(buffer);
+        return Base64.getUrlEncoder().withoutPadding().encodeToString(buffer);
+    }
+
+    private String generateRandomSecret() {
+        return UUID.randomUUID().toString() + "-seed";
+    }
+
+    private String safeTrim(String value) {
+        return value == null ? null : value.trim();
+    }
+
+    private void assignResetToken(User user, String token, Duration ttl) {
+        user.setResetTokenHash(hashingService.encode(token));
+        user.setResetTokenSignature(tokenSignature(token));
+        user.setResetTokenExpiry(Instant.now().plus(ttl));
+        user.setResetTokenUsed(false);
+        user.setResetTokenUsedAt(null);
+    }
+
+    private String tokenSignature(String token) {
+        try {
+            MessageDigest digest = MessageDigest.getInstance("SHA-256");
+            byte[] hash = digest.digest(token.getBytes(StandardCharsets.UTF_8));
+            StringBuilder sb = new StringBuilder();
+            for (byte b : hash) {
+                sb.append(String.format("%02x", b));
+            }
+            return sb.toString();
+        } catch (NoSuchAlgorithmException e) {
+            throw new IllegalStateException("SHA-256 unavailable", e);
+        }
+    }
+
+    @Override
+    public Optional<User> handle(InviteUserCommand command) {
+        validateInviteCommand(command);
+        var role = roleRepository.findByName(command.role())
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "Rôle introuvable"));
+
+        var existing = userRepository.findByEmail(command.email());
+        User user = existing.orElseGet(() -> {
+            var seedPassword = hashingService.encode(generateRandomSecret());
+            return new User(command.email(), command.email(), seedPassword, List.of(role), command.createdBy());
+        });
+
+        if (user.getRoles() == null) {
+            user.setRoles(new java.util.HashSet<>());
+        }
+        // Ensure we keep a placeholder password to satisfy DB constraints until activation sets the real one.
+        if (user.getPassword() == null || user.getPassword().isBlank()) {
+            user.setPassword(hashingService.encode(generateRandomSecret()));
+        }
+        if (user.getRoles().stream().noneMatch(r -> r.getName() == role.getName())) {
+            user.addRole(role);
+        }
+
+        if (user.getStatus() != AccountStatus.ACTIVE) {
+            user.setStatus(AccountStatus.INVITED);
+        }
+        user.setEnabled(true);
+        user.setFullName(safeTrim(command.fullName()));
+        user.setCity(safeTrim(command.city()));
+        user.setCompany(safeTrim(command.company()));
+        user.setFleetSize(command.fleetSize());
+        user.setPhone(safeTrim(command.phone()));
+        user.setVehicle(safeTrim(command.vehicle()));
+
+        var token = generateSecureToken();
+        assignResetToken(user, token, INVITE_TOKEN_TTL);
+
+        var savedUser = userRepository.save(user);
+        mailNotificationService.sendActivationEmail(savedUser.getEmail(), savedUser.getFullName(), token, savedUser.getResetTokenExpiry());
+        log.info("Invitation générée pour {} avec rôle {} (existant? {})", savedUser.getEmail(), command.role(), existing.isPresent());
+        return Optional.of(savedUser);
+    }
+
+    @Override
+    public Optional<User> handle(ResendInviteCommand command) {
+        if (command.userId() == null) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Identifiant requis");
+        }
+        var user = userRepository.findById(command.userId())
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Utilisateur introuvable"));
+
+        if (user.getStatus() == AccountStatus.DISABLED) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Le compte est désactivé.");
+        }
+
+        var token = generateSecureToken();
+        assignResetToken(user, token, INVITE_TOKEN_TTL);
+        if (user.getStatus() != AccountStatus.ACTIVE) {
+            user.setStatus(AccountStatus.INVITED);
+        }
+        user.setEnabled(true);
+        var savedUser = userRepository.save(user);
+        mailNotificationService.sendActivationEmail(savedUser.getEmail(), savedUser.getFullName(), token, savedUser.getResetTokenExpiry());
+        log.info("Invitation renvoyée pour {}", savedUser.getEmail());
+        return Optional.of(savedUser);
+    }
+
+    @Override
+    public Optional<User> handle(ResetPasswordWithTokenCommand command) {
+        if (command.token() == null || command.token().isBlank()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Jeton requis");
+        }
+        if (command.newPassword() == null || command.newPassword().length() < 8) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Mot de passe trop court (8 caractères minimum)");
+        }
+
+        var signature = tokenSignature(command.token());
+        var user = userRepository.findByResetTokenSignature(signature)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "Lien expiré ou invalide"));
+
+        if (user.getResetTokenExpiry() == null || Instant.now().isAfter(user.getResetTokenExpiry())) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Lien expiré ou invalide");
+        }
+        if (user.isResetTokenUsed()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Lien déjà utilisé");
+        }
+        if (user.getResetTokenHash() == null || !hashingService.matches(command.token(), user.getResetTokenHash())) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Lien expiré ou invalide");
+        }
+
+        user.setPassword(hashingService.encode(command.newPassword()));
+        user.setStatus(AccountStatus.ACTIVE);
+        user.setEnabled(true);
+        user.setResetTokenUsed(true);
+        user.setResetTokenUsedAt(Instant.now());
+        user.setResetTokenHash(null);
+        user.setResetTokenSignature(null);
+        user.setResetTokenExpiry(null);
+
+        var savedUser = userRepository.save(user);
+        mailNotificationService.sendPasswordChangedEmail(savedUser.getEmail(), savedUser.getFullName());
         return Optional.of(savedUser);
     }
 

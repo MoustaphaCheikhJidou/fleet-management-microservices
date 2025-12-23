@@ -1,0 +1,27 @@
+{
+  "proof": {
+    "url": "http://localhost:8082/login",
+    "formDisplay": "flex",
+    "formFlexDirection": "column",
+    "inputCount": 2,
+    "inputWidths": [
+      {
+        "type": "email",
+        "width": 388
+      },
+      {
+        "type": "password",
+        "width": 388
+      }
+    ],
+    "firstInputBg": "rgba(7, 16, 34, 0.9)",
+    "firstInputColor": "rgb(241, 245, 255)",
+    "firstInputBorder": "1px solid rgba(255, 255, 255, 0.08)",
+    "firstInputWidth": 388,
+    "selectors": [
+      "form-input",
+      "form-input"
+    ]
+  },
+  "screenshot": "/tmp/login-styles-proof.png"
+}

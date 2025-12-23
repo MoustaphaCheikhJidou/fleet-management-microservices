@@ -1,0 +1,65 @@
+{
+  "url": "http://localhost:8081/admin",
+  "loginOk": true,
+  "dailyCanvas": {
+    "present": true,
+    "visible": true,
+    "bbox": {
+      "x": 390,
+      "y": 1032.296875,
+      "width": 389,
+      "height": 222
+    },
+    "sizeOk": true
+  },
+  "typeCanvas": {
+    "present": true,
+    "visible": true,
+    "bbox": {
+      "x": 887,
+      "y": 1032.296875,
+      "width": 389,
+      "height": 222
+    },
+    "sizeOk": true
+  },
+  "afterRefresh": {
+    "dailyCanvas": {
+      "present": true,
+      "visible": true,
+      "bbox": {
+        "x": 390,
+        "y": 1032.296875,
+        "width": 389,
+        "height": 222
+      },
+      "sizeOk": true
+    },
+    "typeCanvas": {
+      "present": true,
+      "visible": true,
+      "bbox": {
+        "x": 887,
+        "y": 1032.296875,
+        "width": 389,
+        "height": 222
+      },
+      "sizeOk": true
+    },
+    "emptyStateVisible": true,
+    "kpiCount": 6
+  },
+  "emptyStateVisible": true,
+  "kpiCount": 6,
+  "consoleErrorsCount": 6,
+  "pageErrorsCount": 0,
+  "consoleErrors": [
+    "Failed to load resource: the server responded with a status of 403 (Forbidden)",
+    "Failed to load resource: the server responded with a status of 403 (Forbidden)",
+    "Failed to load resource: the server responded with a status of 400 (Bad Request)",
+    "Failed to load resource: the server responded with a status of 400 (Bad Request)",
+    "Failed to load resource: the server responded with a status of 403 (Forbidden)",
+    "Failed to load resource: the server responded with a status of 403 (Forbidden)"
+  ],
+  "pageErrors": []
+}

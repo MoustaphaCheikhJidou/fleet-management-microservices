@@ -12,154 +12,195 @@
     />
     <link rel="stylesheet" href="css/app.css" />
   </head>
-  <body class="ui-body">
-    <div class="dashboard-shell">
-      <aside class="dashboard-sidebar">
-        <div class="sidebar-head">
-          <span class="logo-pill">FleetOS</span>
-          <p>Admin Portal</p>
-        </div>
-        <nav>
-          <ul class="sidebar-links">
-            <li><a href="index.html">Accueil</a></li>
-            <li><a href="login.html">Connexion</a></li>
-            <li><a href="signup.html">Création de compte</a></li>
-            <li data-visible-for="ROLE_ADMIN" hidden><a href="admin-dashboard.html">Template Admin</a></li>
-            <li><button id="logoutBtn" class="ghost-button ghost-button--light">Déconnexion</button></li>
-          </ul>
-        </nav>
-        <div class="sidebar-note">
-          <p>Routes sécurisées via Gateway 8080.</p>
-          <p>JWT signé depuis IAM-service.</p>
-        </div>
-      </aside>
-
-      <main class="dashboard-main">
-        <header class="dashboard-header">
-          <div>
-            <p class="eyebrow">Session active</p>
-            <h1 id="userEmail">Utilisateur connecté</h1>
-            <p>Votre token contient les rôles suivants :</p>
-            <ul id="roleBadges" class="role-badges"></ul>
+    <body class="ui-body" data-page="dashboard">
+      <div class="dashboard-shell">
+        <aside class="dashboard-sidebar">
+          <div class="sidebar-head">
+            <span class="logo-pill">FleetOS</span>
+            <p>Gestion de parc</p>
           </div>
-          <div class="session-chip">
-            <p>JWT</p>
-            <span id="tokenPreview">—</span>
+          <nav>
+            <ul class="sidebar-links">
+              <li><a href="dashboard.html">Tableau de bord</a></li>
+              <li><a href="login.html">Connexion</a></li>
+              <li><a href="signup.html">Créer un compte</a></li>
+              <li data-visible-for="ROLE_ADMIN" hidden><a href="admin-dashboard.html">Espace administrateur</a></li>
+              <li><button id="logoutBtn" class="ghost-button ghost-button--light">Déconnexion</button></li>
+            </ul>
+          </nav>
+          <div class="sidebar-note">
+            <p>Suivez vos véhicules, missions et alertes au même endroit.</p>
           </div>
-        </header>
+        </aside>
 
-        <section class="stat-grid">
-          <article class="stat-card">
-            <p>Gateway</p>
-            <h3>Port 8080</h3>
-            <p class="stat-sub">RoleAuthorizationFilter actif</p>
-          </article>
-          <article class="stat-card">
-            <p>IAM Service</p>
-            <h3>Port 8090</h3>
-            <p class="stat-sub">Endpoints `/api/v1/authentication/**`</p>
-          </article>
-          <article class="stat-card">
-            <p>SuperAdmin</p>
-            <h3>SUPERADMIN_* env</h3>
-            <p class="stat-sub">Seeder actif au démarrage</p>
-          </article>
-        </section>
-
-        <section class="panel">
-          <div class="panel-head">
+        <main class="dashboard-main">
+          <header class="dashboard-header">
             <div>
-              <p class="eyebrow">Diagnostics</p>
-              <h2>Tester la santé des microservices</h2>
+              <p class="eyebrow">Tableau de bord FleetOS</p>
+              <h1 id="userEmail">Utilisateur connecté</h1>
+              <p id="dashboardSubtitle">Pilotage du parc automobile</p>
+              <ul id="roleBadges" class="role-badges"></ul>
             </div>
-            <button id="healthBtn" class="primary-button">Lancer le health check</button>
-          </div>
-          <pre id="healthResult" class="health-result" aria-live="polite">Cliquez sur « Lancer le health check ».</pre>
-        </section>
+          </header>
 
-        <section class="panel" id="adminBoard" data-visible-for="ROLE_ADMIN" hidden>
-          <div class="panel-head">
-            <div>
-              <p class="eyebrow">Centre d’administration</p>
-              <h2>Gérer les comptes IAM</h2>
+          <div id="guardBanner" class="notice-card notice-card--inline" role="status" aria-live="polite" hidden></div>
+
+          <section id="carrierView" data-role-view="carrier" hidden>
+            <article class="panel">
+              <div class="panel-head">
+                <div>
+                  <p class="eyebrow">Vue Exploitant</p>
+                  <h2>Performance du parc</h2>
+                </div>
+                <p id="carrierSummary" class="field-note"></p>
+              </div>
+              <div class="kpi-grid" id="carrierKpis"></div>
+            </article>
+
+            <div class="chart-grid">
+              <article class="panel chart-card">
+                <div class="panel-head">
+                  <div>
+                    <p class="eyebrow">Alertes</p>
+                    <h3>Alertes par semaine</h3>
+                  </div>
+                </div>
+                <div id="carrierAlertsChart" class="chart chart--line" aria-live="polite"></div>
+              </article>
+              <article class="panel chart-card">
+                <div class="panel-head">
+                  <div>
+                    <p class="eyebrow">Incidents</p>
+                    <h3>Répartition des incidents</h3>
+                  </div>
+                </div>
+                <div id="carrierIncidentsChart" class="chart chart--bars" aria-live="polite"></div>
+              </article>
             </div>
-            <div class="panel-actions">
-              <button id="refreshUsersBtn" class="ghost-button">Actualiser les utilisateurs</button>
-            </div>
-          </div>
 
-          <div class="admin-grid">
-            <div class="admin-form">
-              <h3>Créer un administrateur</h3>
-              <form id="createAdminForm" class="form-grid form-grid--stacked">
-                <label class="form-label" for="adminUsername">Nom d’utilisateur</label>
-                <input class="form-control" id="adminUsername" name="username" required placeholder="ex: fleet.supervisor" />
-
-                <label class="form-label" for="adminEmail">Email</label>
-                <input class="form-control" id="adminEmail" name="email" type="email" required placeholder="admin@entreprise.com" />
-
-                <label class="form-label" for="adminPassword">Mot de passe</label>
-                <input class="form-control" id="adminPassword" name="password" type="password" required minlength="8" />
-
-                <button class="primary-button" type="submit">Créer l’administrateur</button>
-              </form>
-              <p id="adminFormStatus" class="status-text" role="status" aria-live="polite"></p>
-            </div>
-
-            <div class="admin-table">
-              <div class="table-head">
-                <h3>Utilisateurs enregistrés</h3>
-                <p id="adminUsersStatus" class="status-text"></p>
+            <section class="panel">
+              <div class="panel-head">
+                <div>
+                  <p class="eyebrow">Alertes</p>
+                  <h3>Dernières alertes</h3>
+                </div>
               </div>
               <div class="table-wrapper" role="region" aria-live="polite">
                 <table>
                   <thead>
                     <tr>
-                      <th>ID</th>
-                      <th>Utilisateur</th>
-                      <th>Email</th>
-                      <th>Rôles</th>
+                      <th>Priorité</th>
+                      <th>Véhicule</th>
+                      <th>Date</th>
                       <th>Statut</th>
-                      <th>Action</th>
                     </tr>
                   </thead>
-                  <tbody id="adminUsersBody"></tbody>
+                  <tbody id="carrierAlertsTable"></tbody>
                 </table>
               </div>
-            </div>
-          </div>
-        </section>
+            </section>
 
-        <section class="panel">
-          <div class="panel-head">
-            <div>
-              <p class="eyebrow">Rappels architecture</p>
-              <h2>Microservices Fleet</h2>
-            </div>
-          </div>
-          <div class="microservices-body microservices-body--inline">
-            <div>
-              <h4>Services métier</h4>
-              <ul>
-                <li>Vehicle Service — caractéristiques et disponibilité.</li>
-                <li>Driver Service — profils conducteurs.</li>
-                <li>Tracking Service — flux GPS simulés.</li>
-                <li>Incident Service — gestion des alertes terrain.</li>
-              </ul>
-            </div>
-            <div>
-              <h4>Stack technique</h4>
-              <ul>
-                <li>Gateway + Eureka + Config Server.</li>
-                <li>RabbitMQ pour la propagation d’événements IAM.</li>
-                <li>Scripts `RUN_FULL_SETUP.sh` et `test_endpoints.py` prêts à l’emploi.</li>
-              </ul>
-            </div>
-          </div>
-        </section>
-      </main>
-    </div>
+            <section class="panel">
+              <div class="panel-head">
+                <div>
+                  <p class="eyebrow">Missions</p>
+                  <h3>Dernières missions</h3>
+                </div>
+              </div>
+              <div class="table-wrapper" role="region" aria-live="polite">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>Conducteur</th>
+                      <th>Itinéraire</th>
+                      <th>Statut</th>
+                      <th>Prochain arrêt</th>
+                    </tr>
+                  </thead>
+                  <tbody id="carrierMissionsTable"></tbody>
+                </table>
+              </div>
+            </section>
 
-    <script type="module" src="js/dashboard.js"></script>
-  </body>
+            <section class="panel quick-actions">
+              <div class="panel-head">
+                <div>
+                  <p class="eyebrow">Actions rapides</p>
+                  <h3>Préparer le terrain</h3>
+                </div>
+              </div>
+              <div class="quick-actions__grid">
+                <button class="primary-button" data-action="add-vehicle">Ajouter un véhicule</button>
+                <button class="primary-button" data-action="add-driver">Ajouter un conducteur</button>
+                <button class="ghost-button" data-action="plan-maintenance">Planifier une maintenance</button>
+                <button class="ghost-button" data-action="share-report">Partager un rapport</button>
+              </div>
+              <p class="field-note">Ces actions affichent des exemples de flux. Intégration API à finaliser (TODO backend).</p>
+              <p id="carrierActionsStatus" class="status-text" role="status" aria-live="polite"></p>
+            </section>
+          </section>
+
+          <section id="driverView" data-role-view="driver" hidden>
+            <article class="panel">
+              <div class="panel-head">
+                <div>
+                  <p class="eyebrow">Vue Conducteur</p>
+                  <h2>Votre journée</h2>
+                </div>
+                <p id="driverSummary" class="field-note"></p>
+              </div>
+              <div class="kpi-grid" id="driverKpis"></div>
+            </article>
+
+            <section class="panel">
+              <div class="panel-head">
+                <div>
+                  <p class="eyebrow">Prochaine étape</p>
+                  <h3>Mission à venir</h3>
+                </div>
+              </div>
+              <div id="driverNextMission" class="mission-card" aria-live="polite"></div>
+            </section>
+
+            <section class="panel">
+              <div class="panel-head">
+                <div>
+                  <p class="eyebrow">Historique</p>
+                  <h3>Alertes & incidents</h3>
+                </div>
+              </div>
+              <div id="driverHistoryList" class="history-list" aria-live="polite"></div>
+            </section>
+
+            <section class="panel">
+              <div class="panel-head">
+                <div>
+                  <p class="eyebrow">Déclarer</p>
+                  <h3>Déclarer un incident</h3>
+                </div>
+              </div>
+              <form id="driverIncidentForm" class="form-grid form-grid--stacked">
+                <div class="form-field">
+                  <label class="form-label" for="incidentType">Type d’incident</label>
+                  <select id="incidentType" class="form-select" required>
+                    <option value="Sécurité">Sécurité</option>
+                    <option value="Panne">Panne</option>
+                    <option value="Retard">Retard</option>
+                    <option value="Autre">Autre</option>
+                  </select>
+                </div>
+                <div class="form-field">
+                  <label class="form-label" for="incidentDescription">Description</label>
+                  <textarea id="incidentDescription" class="form-control" rows="3" required placeholder="Décrivez la situation"></textarea>
+                </div>
+                <button class="primary-button" type="submit">Envoyer</button>
+              </form>
+              <p id="driverIncidentStatus" class="status-text" role="status" aria-live="polite"></p>
+            </section>
+          </section>
+        </main>
+      </div>
+
+      <script type="module" src="js/dashboard.js"></script>
+    </body>
 </html>

@@ -1,0 +1,10 @@
+{
+  "ok": true,
+  "counts": {
+    "homeSignupCount": 0,
+    "homeSignupLinkCount": 0,
+    "loginSignupCount": 0
+  },
+  "banner": "Création de compte désactivée — contactez votre administrateur.Fermer",
+  "consoleErrors": []
+}

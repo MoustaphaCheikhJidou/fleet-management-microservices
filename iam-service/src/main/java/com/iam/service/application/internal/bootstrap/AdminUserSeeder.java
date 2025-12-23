@@ -39,9 +39,9 @@ public class AdminUserSeeder implements ApplicationRunner {
                            RoleRepository roleRepository,
                            RoleCommandService roleCommandService,
                            PasswordEncoder passwordEncoder,
-                           @Value("${iam.superadmin.username:${SUPERADMIN_USERNAME:admin}}") String adminUsername,
-                           @Value("${iam.superadmin.email:${SUPERADMIN_EMAIL:admin1@gmail.com}}") String adminEmail,
-                           @Value("${iam.superadmin.password:${SUPERADMIN_PASSWORD:Ma@22117035}}") String adminPassword) {
+                            @Value("${iam.superadmin.username:${SUPERADMIN_USERNAME:superadmin}}") String adminUsername,
+                            @Value("${iam.superadmin.email:${SUPERADMIN_EMAIL:superadmin@example.com}}") String adminEmail,
+                            @Value("${iam.superadmin.password:${SUPERADMIN_PASSWORD:ChangeMe_Admin!123}}") String adminPassword) {
         this.userRepository = userRepository;
         this.roleRepository = roleRepository;
         this.roleCommandService = roleCommandService;

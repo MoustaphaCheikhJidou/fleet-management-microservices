@@ -19,10 +19,12 @@ public class WebFluxSecurityConfiguration {
                 .formLogin(ServerHttpSecurity.FormLoginSpec::disable)
                 .authorizeExchange(ex -> ex
                         .pathMatchers(HttpMethod.OPTIONS, "/**").permitAll()
-                        .pathMatchers("/actuator/**").permitAll()
-                        .pathMatchers("/api/v1/authentication/**").permitAll()
-                        .pathMatchers("/api/v1/carriers/sign-up").permitAll()
-                        .anyExchange().permitAll()
+                    .pathMatchers("/actuator/**").permitAll()
+                    .pathMatchers("/api/v1/auth/**").permitAll()
+                    .pathMatchers("/api/v1/authentication/**").permitAll()
+                    .pathMatchers("/api/v1/carriers/sign-up").permitAll()
+                    .pathMatchers("/api/v1/admin/**").hasRole("ADMIN")
+                    .anyExchange().authenticated()
                 )
                 .build();
     }

@@ -1,0 +1,5 @@
+{
+  "redirectedToLogin": true,
+  "url": "http://localhost:8081/login",
+  "screenshot": "/tmp/admin-guard-no-session.png"
+}

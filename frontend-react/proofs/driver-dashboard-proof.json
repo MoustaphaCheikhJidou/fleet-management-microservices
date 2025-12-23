@@ -1,0 +1,8 @@
+{
+  "url": "http://localhost:8081/dashboard",
+  "titlePresent": true,
+  "kpiCount": 4,
+  "tableCount": 5,
+  "panelCount": 6,
+  "screenshot": "/tmp/driver-dashboard-proof.png"
+}

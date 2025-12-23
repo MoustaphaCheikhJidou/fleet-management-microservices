@@ -10,6 +10,14 @@ import java.util.List;
  * @param email login email
  * @param roles attached roles
  * @param enabled whether the account is enabled
+ * @param status account status (pending/active/disabled)
+ * @param fullName optional display name
+ * @param city optional city/business info
+ * @param company optional company label
+ * @param fleetSize optional fleet size
+ * @param phone optional phone
+ * @param vehicle optional vehicle/identifier
+ * @param resetTokenExpiry optional ISO-8601 expiry for activation/reset token
  * @param createdAt ISO-8601 formatted creation date
  */
 public record AdminUserResource(
@@ -18,6 +26,14 @@ public record AdminUserResource(
         String email,
         List<String> roles,
         boolean enabled,
+        String status,
+        String fullName,
+        String city,
+        String company,
+        Integer fleetSize,
+        String phone,
+        String vehicle,
+        String resetTokenExpiry,
         String createdAt
 ) {
 }

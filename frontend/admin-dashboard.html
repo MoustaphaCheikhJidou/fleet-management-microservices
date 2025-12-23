@@ -12,247 +12,253 @@
     />
     <link rel="stylesheet" href="css/app.css" />
   </head>
-  <body class="ui-body" data-page="admin">
-    <div class="admin-layout">
-      <aside class="admin-sidebar">
-        <div class="admin-sidebar__brand">
-          <span class="logo-pill">FleetOS</span>
-          <strong>Portail Administrateur</strong>
-          <p class="sidebar-note">Application Distribuée de Gestion d’un Parc Automobile.</p>
-        </div>
-        <nav class="admin-sidebar__menu" aria-label="Navigation administrateur">
-          <ul class="admin-sidebar__nav">
-            <li><a href="#resume">Vue d’ensemble</a></li>
-            <li><a href="#usersBoard">Utilisateurs</a></li>
-            <li><a href="#adminBoard">Administrateurs</a></li>
-            <li><a href="#servicesBoard">État des services</a></li>
-            <li><a href="#rolesView">Synthèse rôles</a></li>
-            <li><a href="dashboard.html">Vue opérateur</a></li>
-            <li><a href="signup.html">Inscription Carrier/Driver</a></li>
-            <li><a href="README.md" target="_blank" rel="noreferrer">Guide Fleet</a></li>
-          </ul>
-        </nav>
-        <button id="logoutBtn" class="ghost-button ghost-button--light admin-sidebar__logout">Déconnexion</button>
-      </aside>
-
-      <main class="admin-main">
-        <header class="admin-topbar" id="resume">
-          <div>
-            <p class="eyebrow">Application Distribuée de Gestion d’un Parc Automobile</p>
-            <h1 id="userEmail">Administrateur connecté</h1>
-            <p>Rôles portés par votre JWT :</p>
-            <ul id="roleBadges" class="role-badges"></ul>
+    <body class="ui-body" data-page="admin">
+      <div class="admin-layout">
+        <aside class="admin-sidebar">
+          <div class="admin-sidebar__brand">
+            <span class="logo-pill">FleetOS</span>
+            <strong>Portail Administrateur</strong>
+            <p class="sidebar-note">Pilotez exploitants, conducteurs et alertes depuis un même espace.</p>
           </div>
-          <div class="admin-topbar__session">
-            <p>Token signé</p>
-            <strong id="tokenPreview">—</strong>
-            <p class="field-note">Signé par Gateway (8080) + IAM (8090)</p>
-          </div>
-        </header>
+          <nav class="admin-sidebar__menu" aria-label="Navigation administrateur">
+            <ul class="admin-sidebar__nav">
+              <li><a href="#resume">Vue d’ensemble</a></li>
+              <li><a href="#usersBoard">Exploitants & Conducteurs</a></li>
+              <li><a href="#fleetInsights">Parcs & Véhicules</a></li>
+              <li><a href="#alertsBoard">Alertes & Incidents</a></li>
+              <li><a href="#adminBoard">Administrateurs</a></li>
+              <li><a href="#settings">Paramètres</a></li>
+              <li><a href="dashboard.html">Vue opérateur</a></li>
+            </ul>
+          </nav>
+          <button id="logoutBtn" class="ghost-button ghost-button--light admin-sidebar__logout">Déconnexion</button>
+        </aside>
 
-        <section class="admin-metrics" data-visible-for="ROLE_ADMIN" hidden>
-          <article class="admin-metric">
-            <p>Comptes totaux</p>
-            <h3 id="adminUsersCount">0</h3>
-            <p class="stat-sub">Tous rôles confondus</p>
-          </article>
-          <article class="admin-metric">
-            <p>Comptes actifs</p>
-            <h3 id="adminEnabledCount">0</h3>
-            <p class="stat-sub">Utilisateurs habilités</p>
-          </article>
-          <article class="admin-metric">
-            <p>SuperAdmin</p>
-            <h3>SUPERADMIN_*</h3>
-            <p class="stat-sub">Seeder vérifie l’email admin1@gmail.com</p>
-          </article>
-        </section>
-
-        <section class="admin-card" id="usersBoard" data-visible-for="ROLE_ADMIN" hidden>
-          <header>
+        <main class="admin-main">
+          <header class="admin-topbar" id="resume">
             <div>
-              <p class="eyebrow">Utilisateurs</p>
-              <h2>Liste complète des comptes IAM</h2>
-              <p class="field-note">GET /api/v1/admin/users via Gateway</p>
-            </div>
-            <div class="admin-card__actions">
-              <button id="refreshUsersBtn" class="ghost-button">Actualiser</button>
+              <p class="eyebrow">Pilotage des comptes FleetOS</p>
+              <h1 id="userEmail">Administrateur connecté</h1>
+              <p>Supervisez les utilisateurs et la santé opérationnelle des parcs.</p>
+              <ul id="roleBadges" class="role-badges"></ul>
             </div>
           </header>
-          <p id="adminUsersStatus" class="status-text"></p>
-          <div class="table-wrapper" role="region" aria-live="polite">
-            <table>
-              <thead>
-                <tr>
-                  <th>ID</th>
-                  <th>Utilisateur</th>
-                  <th>Email</th>
-                  <th>Rôles</th>
-                  <th>Statut</th>
-                  <th>Action</th>
-                </tr>
-              </thead>
-              <tbody id="adminUsersBody"></tbody>
-            </table>
-          </div>
-        </section>
 
-        <section class="admin-card admin-card--stacked" id="adminBoard" data-visible-for="ROLE_ADMIN" hidden>
-          <header>
-            <div>
-              <p class="eyebrow">Administrateurs</p>
-              <h2>Créer et auditer les comptes ROLE_ADMIN</h2>
-              <p class="field-note">Seed + portail garantissent le respect des rôles</p>
-            </div>
-            <div class="admin-card__actions">
-              <button id="refreshAdminsBtn" class="ghost-button">Actualiser les admins</button>
-            </div>
-          </header>
-          <div class="admin-panels admin-panels--stacked">
-            <article class="admin-card admin-card--sub">
-              <h3>Créer un administrateur</h3>
-              <p class="field-note">Le seeder garantit au moins un SuperAdmin, ce formulaire ajoute des comptes additionnels.</p>
-              <form id="createAdminForm" class="form-grid form-grid--stacked">
-                <div class="form-field">
-                  <label class="form-label" for="adminUsername">Nom d’utilisateur</label>
-                  <input class="form-control" id="adminUsername" name="username" required placeholder="ex: fleet.supervisor" />
+          <section class="admin-metrics" data-visible-for="ROLE_ADMIN" hidden>
+            <article class="admin-metric">
+              <p>Exploitants inscrits</p>
+              <h3 id="adminTotalCarriers">0</h3>
+              <p class="stat-sub">Organisations actives</p>
+            </article>
+            <article class="admin-metric">
+              <p>Conducteurs inscrits</p>
+              <h3 id="adminTotalDrivers">0</h3>
+              <p class="stat-sub">Profils terrain</p>
+            </article>
+            <article class="admin-metric">
+              <p>Véhicules suivis</p>
+              <h3 id="adminTotalVehicles">0</h3>
+              <p class="stat-sub">Flotte déclarée</p>
+            </article>
+            <article class="admin-metric">
+              <p>Alertes ouvertes</p>
+              <h3 id="adminTotalAlerts">0</h3>
+              <p class="stat-sub">Priorités en cours</p>
+            </article>
+            <article class="admin-metric">
+              <p>Incidents aujourd’hui</p>
+              <h3 id="adminTodayIncidents">0</h3>
+              <p class="stat-sub">Signalements du jour</p>
+            </article>
+            <article class="admin-metric">
+              <p>Taux de résolution</p>
+              <h3 id="adminResolutionRate">0%</h3>
+              <p class="stat-sub">Alertes clôturées</p>
+            </article>
+          </section>
+
+          <section class="admin-card" id="fleetInsights" data-visible-for="ROLE_ADMIN" hidden>
+            <header>
+              <div>
+                <p class="eyebrow">Vue d’ensemble</p>
+                <h2>Activité des parcs</h2>
+                <p class="field-note">Indicateurs issus des données de démonstration FleetOS.</p>
+              </div>
+            </header>
+            <div class="insight-grid">
+              <article class="panel chart-card">
+                <div class="panel-head">
+                  <p class="eyebrow">Alertes</p>
+                  <h3>Ouvert vs clôturé</h3>
                 </div>
-                <div class="form-field">
-                  <label class="form-label" for="adminEmail">Email</label>
-                  <input class="form-control" id="adminEmail" name="email" type="email" required placeholder="admin@entreprise.com" />
+                <div id="adminAlertsChart" class="chart chart--line" aria-live="polite"></div>
+              </article>
+              <article class="panel chart-card">
+                <div class="panel-head">
+                  <p class="eyebrow">Incidents</p>
+                  <h3>Répartition par type</h3>
                 </div>
-                <div class="form-field">
-                  <label class="form-label" for="adminPassword">Mot de passe</label>
-                  <input class="form-control" id="adminPassword" name="password" type="password" required minlength="8" />
+                <div id="adminIncidentsChart" class="chart chart--bars" aria-live="polite"></div>
+              </article>
+              <article class="panel chart-card">
+                <div class="panel-head">
+                  <p class="eyebrow">Parcs</p>
+                  <h3>Top exploitants par alertes</h3>
                 </div>
-                <button class="primary-button" type="submit">Créer l’administrateur</button>
-              </form>
-              <p id="adminFormStatus" class="status-text" role="status" aria-live="polite"></p>
-            </article>
-
-            <article class="admin-card admin-card--sub">
-              <header>
-                <div>
-                  <h3>Administrateurs existants</h3>
-                  <p class="field-note">GET /api/v1/admin/users/admins</p>
-                </div>
-                <p id="adminOnlyStatus" class="status-text"></p>
-              </header>
-              <div class="admin-admins__header">
-                <p>Total administrateurs : <strong id="adminOnlyCount">0</strong></p>
-              </div>
-              <div class="table-wrapper" role="region" aria-live="polite">
-                <table>
-                  <thead>
-                    <tr>
-                      <th>ID</th>
-                      <th>Utilisateur</th>
-                      <th>Email</th>
-                      <th>Statut</th>
-                    </tr>
-                  </thead>
-                  <tbody id="adminOnlyBody"></tbody>
-                </table>
-              </div>
-            </article>
-          </div>
-        </section>
-
-        <section class="admin-card services-board" id="servicesBoard" data-visible-for="ROLE_ADMIN" hidden>
-          <header>
-            <div>
-              <p class="eyebrow">Services critiques</p>
-              <h2>Suivre la santé Gateway, IAM, Vehicles et Issues</h2>
-              <p class="field-note">Les cartes ci-dessous ouvrent directement les endpoints Actuator.</p>
+                <div id="adminActivityChart" class="chart chart--bars" aria-live="polite"></div>
+              </article>
             </div>
-            <button id="healthBtn" class="primary-button">Tester via Gateway</button>
-          </header>
-          <div class="services-board__grid">
-            <article class="service-card">
-              <div class="service-card__head">
-                <h3>Gateway-service</h3>
-                <span>Port 8080</span>
-              </div>
-              <p>Filtre JWT + routage vers tous les microservices. Remonte les propriétés depuis Config Server.</p>
-              <div class="service-card__links">
-                <a class="ghost-button" href="http://localhost:8080/actuator/health" target="_blank" rel="noreferrer">Health Gateway</a>
-              </div>
-            </article>
-            <article class="service-card">
-              <div class="service-card__head">
-                <h3>IAM-service</h3>
-                <span>Port 8090</span>
-              </div>
-              <p>Gestion des utilisateurs, rôles et SuperAdmin. Restreint /api/v1/admin/** à ROLE_ADMIN.</p>
-              <div class="service-card__links">
-                <a class="ghost-button" href="http://localhost:8090/actuator/health" target="_blank" rel="noreferrer">Health IAM</a>
-              </div>
-            </article>
-            <article class="service-card">
-              <div class="service-card__head">
-                <h3>Vehicles-service</h3>
-                <span>Port 8095</span>
-              </div>
-              <p>Catalogue véhicules + suivi GPS. Accessible via Gateway `/api/v1/vehicles/**`.</p>
-              <div class="service-card__links">
-                <a class="ghost-button" href="http://localhost:8095/actuator/health" target="_blank" rel="noreferrer">Health Vehicles</a>
-              </div>
-            </article>
-            <article class="service-card">
-              <div class="service-card__head">
-                <h3>Issues-service</h3>
-                <span>Port 8096</span>
-              </div>
-              <p>Gestion des incidents terrain partagés aux dispatchers. Utilise RabbitMQ pour les alertes.</p>
-              <div class="service-card__links">
-                <a class="ghost-button" href="http://localhost:8096/actuator/health" target="_blank" rel="noreferrer">Health Issues</a>
-              </div>
-            </article>
-          </div>
-          <div id="healthResult" class="admin-health__result" aria-live="polite">
-            Cliquez sur « Tester via Gateway » pour interroger http://localhost:8080/actuator/health.
-          </div>
-        </section>
+          </section>
 
-        <section class="admin-card role-synthesis" id="rolesView" data-visible-for="ROLE_ADMIN" hidden>
-          <header>
-            <div>
-              <p class="eyebrow">Vue multi-rôles</p>
-              <h2>Synthèse fonctionnelle des profils utilisateurs</h2>
+          <section class="admin-card" id="alertsBoard" data-visible-for="ROLE_ADMIN" hidden>
+            <header>
+              <div>
+                <p class="eyebrow">Alertes critiques</p>
+                <h2>Suivi des priorités</h2>
+              </div>
+            </header>
+            <div class="table-wrapper" role="region" aria-live="polite">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Priorité</th>
+                    <th>Véhicule</th>
+                    <th>Exploitant</th>
+                    <th>Date</th>
+                  </tr>
+                </thead>
+                <tbody id="adminCriticalAlertsTable"></tbody>
+              </table>
             </div>
-          </header>
-          <div class="role-synthesis__grid">
-            <article class="role-card">
-              <h3>ROLE_ADMIN</h3>
-              <ul>
-                <li>Accès portail admin + endpoints `/api/v1/admin/**`.</li>
-                <li>Création/suspension des comptes et monitoring des services.</li>
-                <li>Peut provisionner d’autres admins (formulaire ci-dessus).</li>
-              </ul>
-            </article>
-            <article class="role-card">
-              <h3>ROLE_CARRIER</h3>
-              <ul>
-                <li>Vue dashboard.html pour planifier flotte et opérations.</li>
-                <li>Lecture/écriture sur Vehicles & Shipments via Gateway.</li>
-                <li>Accès au support incidents pour déclarer une anomalie.</li>
-              </ul>
-            </article>
-            <article class="role-card">
-              <h3>ROLE_DRIVER</h3>
-              <ul>
-                <li>Accès rapide au suivi individuel et à la feuille de route.</li>
-                <li>Remontée d’événements Issues-service depuis le terrain.</li>
-                <li>Connecté via login.html puis redirigé vers dashboard.html.</li>
-              </ul>
-            </article>
-          </div>
-        </section>
-      </main>
-    </div>
+          </section>
 
-    <div id="adminToast" class="admin-toast" role="status" aria-live="polite" hidden></div>
+          <section class="admin-card" id="usersBoard" data-visible-for="ROLE_ADMIN" hidden>
+            <header>
+              <div>
+                <p class="eyebrow">Comptes utilisateurs</p>
+                <h2>Exploitants & Conducteurs</h2>
+                <p class="field-note">Données issues de l’annuaire FleetOS.</p>
+              </div>
+              <div class="admin-card__actions">
+                <button id="refreshUsersBtn" class="ghost-button">Actualiser</button>
+              </div>
+            </header>
+            <p id="adminUsersStatus" class="status-text"></p>
+            <div class="table-wrapper" role="region" aria-live="polite">
+              <table>
+                <thead>
+                  <tr>
+                    <th>ID</th>
+                    <th>Utilisateur</th>
+                    <th>Email</th>
+                    <th>Rôles</th>
+                    <th>Statut</th>
+                    <th>Action</th>
+                  </tr>
+                </thead>
+                <tbody id="adminUsersBody"></tbody>
+              </table>
+            </div>
+          </section>
 
-    <script type="module" src="js/dashboard.js"></script>
-  </body>
+          <section class="admin-card" id="recentAccounts" data-visible-for="ROLE_ADMIN" hidden>
+            <header>
+              <div>
+                <p class="eyebrow">Dernières créations</p>
+                <h2>Comptes ajoutés récemment</h2>
+              </div>
+            </header>
+            <div class="table-wrapper" role="region" aria-live="polite">
+              <table>
+                <thead>
+                  <tr>
+                    <th>ID</th>
+                    <th>Utilisateur</th>
+                    <th>Email</th>
+                    <th>Rôles</th>
+                  </tr>
+                </thead>
+                <tbody id="adminRecentAccountsBody"></tbody>
+              </table>
+            </div>
+          </section>
+
+          <section class="admin-card admin-card--stacked" id="adminBoard" data-visible-for="ROLE_ADMIN" hidden>
+            <header>
+              <div>
+                <p class="eyebrow">Administrateurs</p>
+                <h2>Création et pilotage des accès</h2>
+                <p class="field-note">Seuls les administrateurs connectés peuvent activer ou suspendre des comptes.</p>
+              </div>
+              <div class="admin-card__actions">
+                <button id="refreshAdminsBtn" class="ghost-button">Actualiser</button>
+              </div>
+            </header>
+            <div class="admin-panels admin-panels--stacked">
+              <article class="admin-card admin-card--sub">
+                <h3>Créer un administrateur</h3>
+                <p class="field-note">Complétez ce formulaire pour inviter un nouveau responsable FleetOS.</p>
+                <form id="createAdminForm" class="form-grid form-grid--stacked">
+                  <div class="form-field">
+                    <label class="form-label" for="adminUsername">Nom d’utilisateur</label>
+                    <input class="form-control" id="adminUsername" name="username" required placeholder="ex: fleet.supervisor" />
+                  </div>
+                  <div class="form-field">
+                    <label class="form-label" for="adminEmail">Email</label>
+                    <input class="form-control" id="adminEmail" name="email" type="email" required placeholder="admin@entreprise.com" />
+                  </div>
+                  <div class="form-field">
+                    <label class="form-label" for="adminPassword">Mot de passe</label>
+                    <input class="form-control" id="adminPassword" name="password" type="password" required minlength="8" />
+                  </div>
+                  <button class="primary-button" type="submit">Créer l’administrateur</button>
+                </form>
+                <p id="adminFormStatus" class="status-text" role="status" aria-live="polite"></p>
+              </article>
+
+              <article class="admin-card admin-card--sub">
+                <header>
+                  <div>
+                    <h3>Liste des administrateurs</h3>
+                    <p class="field-note">Vue dédiée aux rôles critiques.</p>
+                  </div>
+                  <p id="adminOnlyStatus" class="status-text"></p>
+                </header>
+                <div class="admin-admins__header">
+                  <p>Total administrateurs : <strong id="adminOnlyCount">0</strong></p>
+                </div>
+                <div class="table-wrapper" role="region" aria-live="polite">
+                  <table>
+                    <thead>
+                      <tr>
+                        <th>ID</th>
+                        <th>Utilisateur</th>
+                        <th>Email</th>
+                        <th>Statut</th>
+                      </tr>
+                    </thead>
+                    <tbody id="adminOnlyBody"></tbody>
+                  </table>
+                </div>
+              </article>
+            </div>
+          </section>
+
+          <section class="admin-card" id="settings" data-visible-for="ROLE_ADMIN" hidden>
+            <header>
+              <div>
+                <p class="eyebrow">Paramètres</p>
+                <h2>Activation & suspension</h2>
+                <p class="field-note">Utilisez les actions des tableaux pour ajuster les accès utilisateurs.</p>
+              </div>
+            </header>
+            <p>Les changements sont appliqués instantanément auprès des exploitants et conducteurs.</p>
+          </section>
+        </main>
+      </div>
+
+      <div id="adminToast" class="admin-toast" role="status" aria-live="polite" hidden></div>
+
+      <script type="module" src="js/dashboard.js"></script>
+    </body>
 </html>

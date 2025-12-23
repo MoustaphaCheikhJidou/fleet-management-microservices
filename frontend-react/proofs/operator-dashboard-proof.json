@@ -1,0 +1,8 @@
+{
+  "url": "http://localhost:8081/dashboard",
+  "titlePresent": true,
+  "kpiCount": 4,
+  "tableCount": 4,
+  "panelCount": 5,
+  "screenshot": "/tmp/operator-dashboard-proof.png"
+}

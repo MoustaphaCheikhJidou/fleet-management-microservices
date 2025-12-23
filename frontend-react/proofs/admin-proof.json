@@ -1,0 +1,33 @@
+{
+  "url": "http://localhost:8082/admin",
+  "kpiCards": 6,
+  "chartBars": 12,
+  "tables": 5,
+  "rows": {
+    "alerts": 18,
+    "carriers": 5,
+    "drivers": 6,
+    "admins": 2,
+    "users": 3
+  },
+  "status": "Données de démonstration prêtes.",
+  "interactions": {
+    "filterCritique": {
+      "alertsBefore": 18,
+      "alertsAfter": 2
+    },
+    "refresh": {
+      "alertsAfterRefresh": 3,
+      "kpiOpenAlertsBefore": 10,
+      "kpiOpenAlertsAfter": 12,
+      "status": "Simulation régénérée."
+    },
+    "addCarrier": {
+      "carriersBefore": 5,
+      "carriersAfter": 6,
+      "kpiCarriersBefore": 5,
+      "kpiCarriersAfter": 6,
+      "status": "Exploitant ajouté (démonstration)."
+    }
+  }
+}

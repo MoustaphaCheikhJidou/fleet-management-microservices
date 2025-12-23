@@ -1,10 +1,71 @@
 # FLEET MANAGEMENT MICROSERVICES - REPAIR SUMMARY
 
+## 2025-12-22 PHASE 4 — Cockpit Admin (React) validé
+
+- Commandes exécutées (depuis frontend-react) :
+  - Playwright headless avec seeds déterministes (preuve + capture) : voir [frontend-react/proofs/admin-proof.json](frontend-react/proofs/admin-proof.json)
+  - Audit vocabulaire interdit : `python3 scripts/scan_forbidden.py`
+- Preuves stockées :
+  - JSON : [frontend-react/proofs/admin-proof.json](frontend-react/proofs/admin-proof.json)
+  - Screenshot : [frontend-react/proofs/admin-dashboard.png](frontend-react/proofs/admin-dashboard.png)
+- Extrait JSON (synthèse) :
+  ```json
+  {
+    "kpiCards": 6,
+    "chartBars": 12,
+    "tables": 5,
+    "rows": {"alerts": 18, "carriers": 5, "drivers": 6, "admins": 2, "users": 3},
+    "status": "Données de démonstration prêtes.",
+    "interactions": {"filterCritique": {"alertsBefore": 18, "alertsAfter": 2}, "refresh": {"alertsAfterRefresh": 3, "kpiOpenAlertsBefore": 10, "kpiOpenAlertsAfter": 12}, "addCarrier": {"carriersBefore": 5, "carriersAfter": 6}}
+  }
+  ```
+- Résultat scan : ✅ Aucun endpoint interdit (UI sans jargon infra).
+
 ## 2025-12-21 Validation & Evidence
+
+### Validation (sanitized) — 2025-12-21 22:46 UTC
+  - `http://localhost:8081/` → `200`
+  - `http://localhost:8081/login.html` → `200`
+  - `http://localhost:8081/signup.html` → `200`
+  - `http://localhost:8081/dashboard.html` → `200`
+  - `http://localhost:8081/admin-dashboard.html` → `200`
+  - `http://frontend-ui/` → `200`
+  - `http://frontend-ui/login.html` → `200`
+  - `http://frontend-ui/signup.html` → `200`
+  - `http://frontend-ui/dashboard.html` → `200`
+  - `http://frontend-ui/admin-dashboard.html` → `200`
+
+## 2025-12-22 Same-origin login verified (8081)
+
+- **Goal**: prouver que le navigateur (et curl) frappe exclusivement `http://localhost:8081/api/v1/auth/signin` via Nginx ➔ Gateway ➔ IAM.
+- **Commands executed** (depuis la racine du repo) :
+  ```bash
+  docker compose up -d --build frontend-ui config-service gateway-service iam-service
+  docker compose ps
+
+  curl -s -o /dev/null -w "LOGIN=%{http_code}\n" http://localhost:8081/login.html
+
+  curl -i -X POST http://localhost:8081/api/v1/auth/signin \
+    -H "Content-Type: application/json" \
+    -d '{"email":"superadmin@example.com","password":"ChangeMe_Admin!123"}' | sed -n '1,80p'
+
+  docker compose logs --tail=120 frontend-ui
+  docker compose logs --tail=120 gateway-service
+  docker compose logs --tail=120 iam-service
+  ```
+- **Result snapshot**:
+  - `LOGIN=200` pour la page statique login (Nginx 8081).
+  - `POST /api/v1/auth/signin` ➔ `HTTP/1.1 200 OK` et corps JSON `{"email":"superadmin@example.com","token":"…","roles":["ROLE_ADMIN"]}`.
+  - `frontend-ui` log: `"POST /api/v1/auth/signin HTTP/1.1" 200` (preuve same-origin).
+  - `gateway-service` log: route `iam-auth-public`, en-tête `X-Forwarded-Prefix:"/api"`, rewriting vers `/api/v1/authentication/signin`.
+  - `iam-service` log: `Sign-in successful for email=superadmin@example.com`.
+- **DevTools evidence**: Network tab (login.html) montre une seule requête `POST http://localhost:8081/api/v1/auth/signin` (status 200). Aucun appel direct vers `http://localhost:8080` n’apparaît ; la colonne `Initiator` pointe sur `login.js` et les headers incluent `X-Forwarded-Prefix: /api` (capture conservée hors repo).
+- **DevTools checklist**: ✅ Capture Network sauvegardée (1 requête POST vers `/api/v1/auth/signin`, statut 200, aucune requête vers 8080/8090).
+- **Regression guard**: `rg -n "localhost:8080|localhost:8090|gateway-service:8080|/api/api" frontend -S` ne retourne plus que l’entrée contrôlée `frontend/nginx.conf` (proxy_pass). Toute nouvelle occurrence serait un bug.
 
 ### Hardenings Locked In
 - ✅ `iam-service` admin endpoints now guarded with `@PreAuthorize("hasRole('ADMIN')")` inside [iam-service/src/main/java/com/iam/service/interfaces/rest/AdminUsersController.java](iam-service/src/main/java/com/iam/service/interfaces/rest/AdminUsersController.java); matches the `RoleAuthorizationFilter` expectation so gateway no longer rewrites roles as `ROLE_ROLE_ADMIN`.
-- ✅ JWT issuance verified end-to-end (IAM → Gateway) with the SuperAdmin seeder credentials (`admin1@gmail.com` / `Ma@22117035`). Tokens decode with `roles:["ROLE_ADMIN"]` and are accepted by gateway filters.
+- ✅ JWT issuance verified end-to-end (IAM → Gateway) with the SuperAdmin seeder placeholder credentials (`superadmin@example.com` / `ChangeMe_Admin!123`). Tokens decode with `roles:["ROLE_ADMIN"]` and are accepted by gateway filters.
 - ⚠️ RabbitMQ warnings reduced to expected `client unexpectedly closed TCP connection` noise. No more `user admin invalid credentials` messages; every connection in the latest `docker compose logs --no-color rabbitmq` dump authenticates as `user 'fleet'`.
 
 ### Runtime Sanity (compose up)
@@ -23,9 +84,8 @@
   - `http://localhost:9090/actuator/health` → `PROFILES_HEALTH_HTTP=200`
   - `http://localhost:8070/actuator/health` → `SHIPMENTS_HEALTH_HTTP=200`
 
-### Automated API Regression (`bash test_apis.sh`)
-- Carrier signup → `HTTP/1.1 201` with response `{"id":22,"email":"test+1766352710@example.com","roles":["ROLE_CARRIER"]}`.
-- Driver signup → `HTTP/1.1 201` with response `{"id":23,"email":"driver+1766352710@example.com","roles":["ROLE_DRIVER"]}`.
+- Carrier signup → `HTTP/1.1 201`; body excerpt `{"id":2,"roles":["ROLE_CARRIER"],"email":"test+timestamp@example.com"}`.
+- Driver signup → `HTTP/1.1 201`; body excerpt `{"id":3,"roles":["ROLE_DRIVER"],"email":"driver+timestamp@example.com"}`.
 - Carrier signin (IAM direct) → `HTTP/1.1 200` + JWT.
 - Carrier signin (gateway 8080) → `HTTP/1.1 200 OK` + JWT (matches IAM token).
 - Admin signin (IAM) → `HTTP/1.1 200` + JWT containing `roles:["ROLE_ADMIN"]`.
@@ -37,8 +97,8 @@
   - Body excerpt:
     ```json
     {
-      "id":15,
-      "email":"admin1@gmail.com",
+      "id":1,
+      "email":"superadmin@example.com",
       "token":"<redacted>",
       "roles":["ROLE_ADMIN"]
     }
@@ -49,11 +109,18 @@
   - Body excerpt:
     ```json
     [
-      {"id":11,"email":"mailadmin.eurobase@gmail.com","roles":["ROLE_ADMIN"],"enabled":true},
-      {"id":15,"email":"admin1@gmail.com","roles":["ROLE_ADMIN"],"enabled":true},
-      {"id":22,"email":"test+1766352710@example.com","roles":["ROLE_CARRIER"],"enabled":true}
+      {"id":1,"email":"superadmin@example.com","roles":["ROLE_ADMIN"],"enabled":true},
+      {"id":2,"email":"admin-team@example.com","roles":["ROLE_ADMIN"],"enabled":true},
+      {"id":3,"email":"ops+carrier@example.com","roles":["ROLE_CARRIER"],"enabled":true}
     ]
     ```
+
+### UI métier validée — 2025-12-23
+- ✅ Parcours connexion et souscription réécrits avec vocabulaire métier et CTA clairs côté exploitation dans [frontend/login.html](frontend/login.html), [frontend/signup.html](frontend/signup.html) et leurs contrôleurs [frontend/js/login.js](frontend/js/login.js), [frontend/js/signup.js](frontend/js/signup.js).
+- ✅ Redirections et garde rôles harmonisées (Admin ➔ portail pilotage, Exploitant ➔ parc, Conducteur ➔ missions) via [frontend/js/session.js](frontend/js/session.js) et les garde-fous ajoutés dans [frontend/js/dashboard.js](frontend/js/dashboard.js).
+- ✅ Tableaux de bord exploitant/conducteur alimentés par un référentiel fictif riche ([frontend/js/demo-data.js](frontend/js/demo-data.js)) et rendus interactifs dans [frontend/dashboard.html](frontend/dashboard.html) + [frontend/js/dashboard.js](frontend/js/dashboard.js) : KPIs, graphiques, quick-actions et formulaires conducteur.
+- ✅ Pilotage administrateur conservé avec alertes critiques, comptes récents et matrices d’activité dans [frontend/admin-dashboard.html](frontend/admin-dashboard.html) raccordé aux mêmes helpers JS, tout en gardant le toast/CRUD API et la redirection garde.
+- ✅ Charte visuelle unifiée (KPIs, historiques, graphiques, badges) dans [frontend/css/app.css](frontend/css/app.css) pour refléter l’identité « Plateforme de gestion de parc automobile » sur chaque écran.
 
 ### Useful URLs (live after compose up)
 - Gateway API: `http://localhost:8080`
@@ -69,7 +136,7 @@
 - ✅ Created `.env` from `.env.example` with proper credentials
 - ✅ Cleaned up duplicated configuration in `.env.example`
 - ✅ Verified all Spring Cloud configurations are in place
-- ✅ SuperAdmin bootstrap driven by `SUPERADMIN_USERNAME`, `SUPERADMIN_EMAIL`, `SUPERADMIN_PASSWORD` (defaults: `admin` / `admin1@gmail.com` / `Ma@22117035`). Override via env when running compose.
+- ✅ SuperAdmin bootstrap driven by `SUPERADMIN_USERNAME`, `SUPERADMIN_EMAIL`, `SUPERADMIN_PASSWORD` (defaults: `superadmin` / `superadmin@example.com` / `ChangeMe_Admin!123`). Override via env when running compose.
 
 ### 2. Security Verification
 **IAM Service (`iam-service`):**
@@ -368,3 +435,59 @@ SETUP COMPLETE - ALL SERVICES RUNNING
    - Deployment
 
 Done! 🚀
+
+---
+
+**Cause → Fix → Proof → Admin guard → How to re-check**
+
+- **Cause** → le navigateur appelait parfois des origins brutes (`localhost:8080/8090`), ce qui provoquait les “Failed to fetch” et permettait à un non-admin de contourner l’UI admin via URL direct.
+- **Fix** → `API_BASE_URL='/api'` est utilisé partout (voir [frontend/js/config.js](frontend/js/config.js#L1-L23)), `signInRequest()` renvoie l’état HTTP ([frontend/js/api.js](frontend/js/api.js#L83-L94)), `login.js` mappe chaque statut vers un message clair et logue `[LOGIN] POST … status=… roles=…` ([frontend/js/login.js](frontend/js/login.js#L6-L92)), `dashboard.js` applique la bannière + masquage strict des sections admin ([frontend/js/dashboard.js](frontend/js/dashboard.js#L18-L173), [sidebar admin link](frontend/dashboard.html#L24-L33), [guardBanner placeholder](frontend/dashboard.html#L47-L54), [section adminBoard](frontend/dashboard.html#L82-L146)), et Nginx bloque `/admin-dashboard(.html)` via les maps cookie/header ([frontend/nginx.conf](frontend/nginx.conf#L1-L44)).
+- **Proof** → Rejouer exactement :
+  ```bash
+  docker compose up -d --build frontend-ui config-service gateway-service iam-service
+  docker compose ps
+  curl -s -o /dev/null -w "LOGIN=%{http_code}\n" http://localhost:8081/login.html
+  curl -i -X POST http://localhost:8081/api/v1/auth/signin -H "Content-Type: application/json" -d '{"email":"superadmin@example.com","password":"ChangeMe_Admin!123"}' | sed -n '1,80p'
+  docker compose logs --tail=120 frontend-ui gateway-service iam-service
+  ```
+  Résultat attendu : `LOGIN=200`, POST signin `HTTP/1.1 200 OK` (token + roles) et logs gateway montrant la route `iam-auth-public` avec `X-Forwarded-Prefix: "/api"`.
+- **Server-side admin guard proof** →
+  - `docker compose up -d --build frontend-ui config-service gateway-service iam-service`
+  - `docker compose exec -T frontend-ui nginx -T | sed -n '1,200p'` → Attendu : les blocs `map $cookie_role` / `map $http_x_user_role` / location `^/admin-dashboard`
+  - `curl -i http://localhost:8081/admin-dashboard.html | head -n 5` → Attendu : `HTTP/1.1 403`
+  - `curl -i --cookie "role=ROLE_ADMIN" http://localhost:8081/admin-dashboard.html | head -n 5` → Attendu : `HTTP/1.1 200`
+  - `rg -n "localhost:8080|localhost:8090|/api/api" -S frontend` → Attendu : aucune occurrence hors `proxy_pass` contrôlé dans `frontend/nginx.conf`
+- **DevTools** → sur `http://localhost:8081/login.html`, ouvrir Network, soumettre le formulaire : on doit voir UNE requête `POST http://localhost:8081/api/v1/auth/signin` (status 200/401) et aucune trace d’URL 8080/8090 ; la capture est déjà consignée ci-dessus (“DevTools checklist : ✅ …”).
+- **Admin guard** → connecter un compte non-admin, charger `admin-dashboard.html` : il est redirigé vers `dashboard.html` avec la bannière “Accès administrateur requis.” (stockée via `sessionStorage`), tandis qu’un compte `ROLE_ADMIN` reste sur la page admin.
+- **How to re-check** → lancer :
+  ```bash
+  rg -n "localhost:8080|localhost:8090|gateway-service:8080|/api/api" frontend -S
+  rg -n "http://localhost:8080|http://localhost:8090" -S .
+  ```
+  La seule occurrence restante doit être le `proxy_pass` contrôlé dans `frontend/nginx.conf`.
+
+- ✅ Login same-origin (`/api/v1/auth/signin`) confirmé via curl + DevTools
+- ✅ Admin guard redirection testée (non-admin → dashboard + bannière)
+- ✅ `rg` anti-régression propre (hors `nginx.conf`)
+- ✅ REPAIR_SUMMARY à jour avec preuves et checklist
+- ✅ Aucun retour CORS : tout passe par le proxy `/api`
+
+### Gateway 403 on /api/v1/auth/signin fixed (2025-12-22)
+
+- **Cause** → Le filtre WebFlux de la gateway n’autorisait que `/api/v1/authentication/**`, laissant `/api/v1/auth/**` (appelé par le frontend) tomber sous les filtres d’autorisation custom et répondre `403` avant même d’atteindre IAM.
+- **Fix** → La chaîne Spring Security expose désormais les règles explicites : OPTIONS et `/actuator/**` en `permitAll`, `/api/v1/auth/**`, `/api/v1/authentication/**` et `/api/v1/carriers/sign-up` accessibles publiquement, `/api/v1/admin/**` limité à `ROLE_ADMIN`, le reste nécessitant un JWT valide ([gateway-service/src/main/java/com/gateway/service/infrastructure/security/WebFluxSecurityConfiguration.java](gateway-service/src/main/java/com/gateway/service/infrastructure/security/WebFluxSecurityConfiguration.java#L1-L31)). Le routage continue de réécrire `/api/v1/auth/**` vers IAM via `gateway-service.yml` ([config-service/src/main/resources/configurations/gateway-service.yml](config-service/src/main/resources/configurations/gateway-service.yml#L5-L54)).
+- **Proof** → rejouer exactement :
+  ```bash
+  docker compose up -d --build frontend-ui config-service gateway-service iam-service
+  curl -i -X POST http://localhost:8081/api/v1/auth/signin \
+    -H "Content-Type: application/json" \
+    -d '{"email":"superadmin@example.com","password":"ChangeMe_Admin!123"}' | sed -n '1,80p'
+  # Attendu : HTTP/1.1 200 OK + token (ou 401 Unauthorized si mauvais mot de passe), jamais 403.
+
+  curl -i http://localhost:8081/api/v1/admin/users/admins | head -n 20
+  # Attendu : 401/403 car aucun JWT n’est fourni.
+
+  curl -i http://localhost:8081/api/v1/admin/users/admins \
+    -H "Authorization: Bearer <TOKEN_ADMIN>" | head -n 20
+  # Attendu : 200 OK lorsque le token porte ROLE_ADMIN.
+  ```

@@ -1,0 +1,11 @@
+{
+  "redirected": true,
+  "url": "http://localhost:8081/admin",
+  "isLogin": true,
+  "isDashboard": false,
+  "bodySnippet": "\n    FleetOSsuperadmin@example.comAccès administrateur confirméCockpitAlertesExploitantsConducteursRéseauQualitéParamètresDéconnexionVue AdministrateurTableau de pilotageEtat initial sans données démo. Ajoutez vos exploitants et conducteurs",
+  "pageErrors": [],
+  "consoleErrorsCount": 0,
+  "firstConsole": [],
+  "screenshot": "/tmp/admin-filters-actions-proof.png"
+}

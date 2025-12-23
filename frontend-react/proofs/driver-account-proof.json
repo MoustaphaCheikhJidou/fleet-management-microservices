@@ -1,0 +1,16 @@
+{
+  "url": "http://localhost:8081/dashboard",
+  "titlePresent": true,
+  "roleHeaderOk": true,
+  "billingSectionOk": true,
+  "currencyOk": true,
+  "currencySample": "MAD",
+  "kpiCount": 4,
+  "tableCount": 6,
+  "panelCount": 7,
+  "paymentRows": 5,
+  "consoleErrorsCount": 0,
+  "pageErrorsCount": 0,
+  "consoleErrors": [],
+  "pageErrors": []
+}

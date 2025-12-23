@@ -1,0 +1,8 @@
+{
+  "redirectedToDashboard": true,
+  "url": "http://localhost:8081/dashboard",
+  "bannerText": "Accès administrateur requis.Fermer",
+  "sessionKey": "fleet-react-session",
+  "session": "{\"token\":\"fake-non-admin-token\",\"email\":\"user@example.com\",\"roles\":[\"ROLE_DRIVER\"]}",
+  "screenshot": "/tmp/admin-guard-non-admin.png"
+}

@@ -1,0 +1,18 @@
+{
+  "url": "http://localhost:8081/dashboard",
+  "titlePresent": true,
+  "statusText": "Sources indisponibles, affichage de démonstration. Source: Démonstration",
+  "statusLive": false,
+  "statusDemo": true,
+  "kpiCount": 4,
+  "tableCount": 6,
+  "menuButtons": [
+    "Mission",
+    "Alertes",
+    "Itinéraire",
+    "Historique",
+    "Paiements",
+    "Profil"
+  ],
+  "screenshot": "/tmp/driver-live-fallback.png"
+}

@@ -1,6 +1,7 @@
 package com.iam.service.infrastructure.authorization.sfs.model;
 
 import com.iam.service.domain.model.aggregates.User;
+import com.iam.service.domain.model.valueobjects.AccountStatus;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
@@ -54,11 +55,12 @@ public class UserDetailsImpl implements UserDetails {
                 .map(SimpleGrantedAuthority::new)
                 .toList();
 
+        boolean activeStatus = user.getStatus() == null || user.getStatus() == AccountStatus.ACTIVE;
         return new UserDetailsImpl(
             user.getEmail(),
             user.getPassword(),
             authorities,
-            user.isEnabled()
+            user.isEnabled() && activeStatus
         );
     }
 

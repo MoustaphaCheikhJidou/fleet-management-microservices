@@ -4,9 +4,12 @@ import com.iam.service.domain.model.aggregates.User;
 import com.iam.service.domain.model.commands.ChangeEmailCommand;
 import com.iam.service.domain.model.commands.ChangePasswordCommand;
 import com.iam.service.domain.model.commands.CreateAdminUserCommand;
+import com.iam.service.domain.model.commands.InviteUserCommand;
 import com.iam.service.domain.model.commands.RegisterCarrierCommand;
+import com.iam.service.domain.model.commands.ResendInviteCommand;
 import com.iam.service.domain.model.commands.SignInCommand;
 import com.iam.service.domain.model.commands.SignUpCommand;
+import com.iam.service.domain.model.commands.ResetPasswordWithTokenCommand;
 import com.iam.service.domain.model.commands.UpdateUserStatusCommand;
 import org.apache.commons.lang3.tuple.ImmutablePair;
 
@@ -77,6 +80,21 @@ public interface UserCommandService {
      * @return the updated user if present
      */
     Optional<User> handle(UpdateUserStatusCommand command);
+
+    /**
+     * Handle admin-driven user invitation.
+     */
+    Optional<User> handle(InviteUserCommand command);
+
+    /**
+     * Handle re-sending an invite token.
+     */
+    Optional<User> handle(ResendInviteCommand command);
+
+    /**
+     * Handle password reset / activation via token.
+     */
+    Optional<User> handle(ResetPasswordWithTokenCommand command);
 
     /**
      * Delete a user by ID.
