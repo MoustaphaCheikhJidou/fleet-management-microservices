@@ -49,3 +49,6 @@ PHASE 4 ✅ (cockpit admin mock validé : KPIs, 2 graphiques, 5 tables, filtres,
 - scan_forbidden: ✅
 - prove_admin_charts_never_disappear.js: ✅ (EXIT 0)
 - artefacts: frontend-react/proofs/admin-charts-never-disappear.(png|json)
+
+## INVITE SMOKE
+- INVITE SMOKE: ✅ iam_invite_smoke.sh exit 0 (signin ROLE_ADMIN, invite 200, mailhog found)
