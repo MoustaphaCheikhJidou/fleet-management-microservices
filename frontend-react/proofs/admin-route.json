@@ -1,0 +1,9 @@
+{
+  "url": "http://localhost:8081/login",
+  "redirectedToLogin": true,
+  "hasAdminTopbar": false,
+  "hasGuardBanner": true,
+  "consoleMessages": [],
+  "pageErrors": [],
+  "screenshot": "/tmp/admin-route.png"
+}

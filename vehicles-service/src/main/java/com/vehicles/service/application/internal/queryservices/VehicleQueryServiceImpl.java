@@ -71,4 +71,13 @@ public class VehicleQueryServiceImpl implements VehicleQueryService {
     public int countVehiclesByManagerId(Long managerId) {
         return vehicleRepository.countByManagerId(managerId);
     }
+
+    /**
+     * Retrieve all vehicles (admin only).
+     * @return a list of all vehicles in the system
+     */
+    @Override
+    public List<Vehicle> getAllVehicles() {
+        return vehicleRepository.findAll();
+    }
 }

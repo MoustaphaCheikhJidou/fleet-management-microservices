@@ -7,10 +7,12 @@ import com.iam.service.domain.services.UserQueryService;
 import com.iam.service.domain.model.commands.ResendInviteCommand;
 import com.iam.service.interfaces.rest.resources.AdminUserResource;
 import com.iam.service.interfaces.rest.resources.CreateAdminUserResource;
+import com.iam.service.interfaces.rest.resources.CreateUserDirectResource;
 import com.iam.service.interfaces.rest.resources.InviteUserResource;
 import com.iam.service.interfaces.rest.resources.UpdateUserStatusResource;
 import com.iam.service.interfaces.rest.transform.AdminUserResourceFromEntityAssembler;
 import com.iam.service.interfaces.rest.transform.CreateAdminUserCommandFromResourceAssembler;
+import com.iam.service.interfaces.rest.transform.CreateUserDirectCommandFromResourceAssembler;
 import com.iam.service.interfaces.rest.transform.InviteUserCommandFromResourceAssembler;
 import com.iam.service.interfaces.rest.transform.UpdateUserStatusCommandFromResourceAssembler;
 import io.swagger.v3.oas.annotations.Operation;
@@ -77,6 +79,13 @@ public class AdminUsersController {
         return ResponseEntity.ok(Map.of("message", "Si l'email est valide, une invitation a été envoyée."));
     }
 
+    @PostMapping(path = "/invite", consumes = MediaType.APPLICATION_JSON_VALUE)
+    @Operation(summary = "Inviter un utilisateur (alias)", description = "Alias compatible AdminPortal pour créer un compte en attente d'activation")
+    public ResponseEntity<?> inviteUserAlias(@Valid @RequestBody InviteUserResource resource) {
+        // Alias endpoint to support /api/v1/admin/users/invite without duplicating logic
+        return inviteUser(resource);
+    }
+
     @PostMapping(path = "/admins", consumes = MediaType.APPLICATION_JSON_VALUE)
     @Operation(summary = "Créer un administrateur", description = "Crée un nouveau compte ROLE_ADMIN")
     public ResponseEntity<AdminUserResource> createAdmin(@Valid @RequestBody CreateAdminUserResource resource) {
@@ -90,6 +99,19 @@ public class AdminUsersController {
         return ResponseEntity.status(HttpStatus.CREATED).body(adminResource);
     }
 
+    @PostMapping(path = "/create", consumes = MediaType.APPLICATION_JSON_VALUE)
+    @Operation(summary = "Créer un compte utilisateur", description = "Crée un compte CARRIER ou DRIVER avec mot de passe (immédiatement actif)")
+    public ResponseEntity<AdminUserResource> createUser(@Valid @RequestBody CreateUserDirectResource resource) {
+        var command = CreateUserDirectCommandFromResourceAssembler.toCommandFromResource(resource);
+        var result = userCommandService.handle(command);
+        if (result.isEmpty()) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).build();
+        }
+        var userResource = AdminUserResourceFromEntityAssembler.toResourceFromEntity(result.get());
+        LOGGER.info("User created directly via AdminPortal: {} (role: {})", userResource.email(), resource.role());
+        return ResponseEntity.status(HttpStatus.CREATED).body(userResource);
+    }
+
     @GetMapping("/admins")
     @Operation(summary = "Lister les administrateurs", description = "Filtre les comptes portant ROLE_ADMIN")
     public ResponseEntity<List<AdminUserResource>> listAdminsOnly() {
@@ -99,6 +121,28 @@ public class AdminUsersController {
                 .map(AdminUserResourceFromEntityAssembler::toResourceFromEntity)
                 .toList();
         return ResponseEntity.ok(adminResources);
+    }
+
+    @GetMapping("/carriers")
+    @Operation(summary = "Lister les exploitants", description = "Filtre les comptes portant ROLE_CARRIER")
+    public ResponseEntity<List<AdminUserResource>> listCarriersOnly() {
+        var users = userQueryService.handle(new GetAllUsersQuery());
+        var carrierResources = users.stream()
+                .filter(user -> user.getRoles().stream().anyMatch(role -> role.getName() == Roles.ROLE_CARRIER))
+                .map(AdminUserResourceFromEntityAssembler::toResourceFromEntity)
+                .toList();
+        return ResponseEntity.ok(carrierResources);
+    }
+
+    @GetMapping("/drivers")
+    @Operation(summary = "Lister les conducteurs", description = "Filtre les comptes portant ROLE_DRIVER")
+    public ResponseEntity<List<AdminUserResource>> listDriversOnly() {
+        var users = userQueryService.handle(new GetAllUsersQuery());
+        var driverResources = users.stream()
+                .filter(user -> user.getRoles().stream().anyMatch(role -> role.getName() == Roles.ROLE_DRIVER))
+                .map(AdminUserResourceFromEntityAssembler::toResourceFromEntity)
+                .toList();
+        return ResponseEntity.ok(driverResources);
     }
 
     @PatchMapping(value = "/{userId}/enabled", consumes = MediaType.APPLICATION_JSON_VALUE)

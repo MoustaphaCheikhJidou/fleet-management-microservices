@@ -256,6 +256,7 @@ a {
   border-radius: 999px;
   font-size: 0.85rem;
   color: var(--text);
+  -webkit-backdrop-filter: blur(6px);
   backdrop-filter: blur(6px);
 }
 

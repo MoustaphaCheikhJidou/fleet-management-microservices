@@ -23,8 +23,8 @@ public class WebFluxSecurityConfiguration {
                     .pathMatchers("/api/v1/auth/**").permitAll()
                     .pathMatchers("/api/v1/authentication/**").permitAll()
                     .pathMatchers("/api/v1/carriers/sign-up").permitAll()
-                    .pathMatchers("/api/v1/admin/**").hasRole("ADMIN")
-                    .anyExchange().authenticated()
+                    // Allow all requests - JwtAuthenticationFilter and RoleAuthorizationFilter handle auth
+                    .anyExchange().permitAll()
                 )
                 .build();
     }

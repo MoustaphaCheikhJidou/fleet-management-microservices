@@ -157,9 +157,11 @@ export function AdminDashboardPage() {
     []
   );
   const [filters, setFilters] = React.useState(initialFilters);
-  const [newCarrier, setNewCarrier] = React.useState({ name: '', city: '', fleetSize: '', contactEmail: '' });
-  const [newDriver, setNewDriver] = React.useState({ name: '', email: '', carrierId: '', phone: '' });
+  const [newCarrier, setNewCarrier] = React.useState({ name: '', city: '', fleetSize: '', contactEmail: '', password: '' });
+  const [newDriver, setNewDriver] = React.useState({ name: '', email: '', carrierId: '', phone: '', password: '' });
   const [newAdmin, setNewAdmin] = React.useState({ name: '', email: '' });
+  const [newVehicle, setNewVehicle] = React.useState({ licensePlate: '', brand: '', model: '', managerId: '' });
+  const [vehicles, setVehicles] = React.useState([]);
 
   const formatInviteError = (error) => {
     if (!error) return 'Impossible d’envoyer l’invitation.';
@@ -176,6 +178,18 @@ export function AdminDashboardPage() {
     setSource(nextSource);
     setStatus(statusLabel || 'Données disponibles.');
     setActionMessage('');
+    // Load vehicles
+    loadVehicles();
+  }
+
+  async function loadVehicles() {
+    try {
+      const vehicleList = await safeFetch(ENDPOINTS.adminVehicles);
+      setVehicles(vehicleList || []);
+    } catch (error) {
+      console.debug('[admin] loadVehicles failed', error);
+      setVehicles([]);
+    }
   }
 
   React.useEffect(() => {
@@ -307,25 +321,39 @@ export function AdminDashboardPage() {
       setActionMessage('Email contact obligatoire et valide.');
       return;
     }
+    if (!newCarrier.password || newCarrier.password.length < 8) {
+      setActionMessage('Mot de passe requis (min 8 caractères).');
+      return;
+    }
     const fleetSizeValue = Number(newCarrier.fleetSize);
     if (Number.isNaN(fleetSizeValue) || fleetSizeValue < 0) {
       setActionMessage('Taille de flotte requise (0 ou plus).');
       return;
     }
 
-    inviteCarrier({ email: newCarrier.contactEmail, fullName: newCarrier.name || newCarrier.contactEmail, city: newCarrier.city, fleetSize: fleetSizeValue })
+    safeFetch(ENDPOINTS.adminCreateUser, {
+      method: 'POST',
+      body: {
+        email: newCarrier.contactEmail,
+        password: newCarrier.password,
+        fullName: newCarrier.name || newCarrier.contactEmail,
+        role: 'CARRIER',
+        city: newCarrier.city,
+        fleetSize: fleetSizeValue,
+      },
+    })
       .then(() => {
-        setStatus('Invitation exploitant envoyée.');
-        setActionMessage(`Invitation envoyée à ${newCarrier.contactEmail}. Activation requise.`);
+        setStatus('Exploitant créé.');
+        setActionMessage(`Compte ${newCarrier.contactEmail} créé avec succès. Connexion immédiate possible.`);
         loadDataset({ preferLive: true });
       })
       .catch((error) => {
-        console.debug('[admin] inviteCarrier failed', error);
+        console.debug('[admin] createCarrier failed', error);
         setActionMessage(formatInviteError(error));
-        setStatus('Invitation exploitant échouée.');
+        setStatus('Création exploitant échouée.');
       });
 
-    setNewCarrier({ name: '', city: '', fleetSize: '', contactEmail: '' });
+    setNewCarrier({ name: '', city: '', fleetSize: '', contactEmail: '', password: '' });
   }
 
   function handleAddDriver(event) {
@@ -342,19 +370,33 @@ export function AdminDashboardPage() {
       setActionMessage('Email conducteur requis et valide.');
       return;
     }
-    inviteDriver({ email: newDriver.email, fullName: newDriver.name || newDriver.email, carrierId: newDriver.carrierId, phone: newDriver.phone })
+    if (!newDriver.password || newDriver.password.length < 8) {
+      setActionMessage('Mot de passe requis (min 8 caractères).');
+      return;
+    }
+    safeFetch(ENDPOINTS.adminCreateUser, {
+      method: 'POST',
+      body: {
+        email: newDriver.email,
+        password: newDriver.password,
+        fullName: newDriver.name || newDriver.email,
+        role: 'DRIVER',
+        carrierId: Number(newDriver.carrierId),
+        phone: newDriver.phone,
+      },
+    })
       .then(() => {
-        setStatus('Invitation conducteur envoyée.');
-        setActionMessage(`Invitation envoyée à ${newDriver.email}. Activation requise.`);
+        setStatus('Conducteur créé.');
+        setActionMessage(`Compte ${newDriver.email} créé avec succès. Connexion immédiate possible.`);
         loadDataset({ preferLive: true });
       })
       .catch((error) => {
-        console.debug('[admin] inviteDriver failed', error);
+        console.debug('[admin] createDriver failed', error);
         setActionMessage(formatInviteError(error));
-        setStatus('Invitation conducteur échouée.');
+        setStatus('Création conducteur échouée.');
       });
 
-    setNewDriver({ name: '', email: '', carrierId: '', phone: '' });
+    setNewDriver({ name: '', email: '', carrierId: '', phone: '', password: '' });
   }
 
   function handleAddAdmin(event) {
@@ -377,6 +419,49 @@ export function AdminDashboardPage() {
     setNewAdmin({ name: '', email: '' });
   }
 
+  function handleAddVehicle(event) {
+    event.preventDefault();
+    if (!newVehicle.licensePlate.trim()) {
+      setActionMessage('Immatriculation obligatoire.');
+      return;
+    }
+    if (!newVehicle.brand.trim()) {
+      setActionMessage('Marque obligatoire.');
+      return;
+    }
+    if (!newVehicle.model.trim()) {
+      setActionMessage('Modèle obligatoire.');
+      return;
+    }
+    if (!newVehicle.managerId) {
+      setActionMessage('Sélectionnez un exploitant (manager).');
+      return;
+    }
+    safeFetch(ENDPOINTS.adminCreateVehicle, {
+      method: 'POST',
+      body: {
+        licensePlate: newVehicle.licensePlate,
+        brand: newVehicle.brand,
+        model: newVehicle.model,
+        managerId: Number(newVehicle.managerId),
+      },
+    })
+      .then(() => {
+        setStatus('Véhicule créé.');
+        setActionMessage(`Véhicule ${newVehicle.licensePlate} créé avec succès.`);
+        loadVehicles();
+        loadDataset({ preferLive: true });
+      })
+      .catch((error) => {
+        console.debug('[admin] createVehicle failed', error);
+        const statusLabel = error.status ? ` (HTTP ${error.status})` : '';
+        setActionMessage(`Création véhicule échouée${statusLabel}.`);
+        setStatus('Création véhicule échouée.');
+      });
+
+    setNewVehicle({ licensePlate: '', brand: '', model: '', managerId: '' });
+  }
+
   function handleResendInvite(userId) {
     if (!userId) return;
     safeFetch(ENDPOINTS.adminResendInvite(userId), { method: 'POST' })
@@ -389,7 +474,38 @@ export function AdminDashboardPage() {
         setActionMessage('Impossible de renvoyer l’invitation.');
       });
   }
+  function handleToggleEnabled(userId, currentEnabled) {
+    if (!userId) return;
+    safeFetch(ENDPOINTS.adminToggleUserEnabled(userId), {
+      method: 'PATCH',
+      body: { enabled: !currentEnabled },
+    })
+      .then(() => {
+        const action = currentEnabled ? 'désactivé' : 'activé';
+        setActionMessage(`Compte ${action} avec succès.`);
+        setStatus(`Compte ${action}.`);
+        loadDataset({ preferLive: true });
+      })
+      .catch((error) => {
+        console.debug('[admin] toggleEnabled failed', error);
+        setActionMessage('Impossible de modifier le statut du compte.');
+      });
+  }
 
+  // Helper to get user name by ID from users/carriers/drivers lists
+  function getUserNameById(userId) {
+    if (!userId) return '—';
+    // Check in carriers
+    const carrier = (tables.carriers || []).find(c => c.id === userId);
+    if (carrier) return carrier.name || carrier.contactEmail || `ID ${userId}`;
+    // Check in drivers
+    const driver = (tables.drivers || []).find(d => d.id === userId);
+    if (driver) return driver.name || driver.email || `ID ${userId}`;
+    // Check in users
+    const user = (users || []).find(u => u.id === userId);
+    if (user) return user.fullName || user.email || `ID ${userId}`;
+    return `ID ${userId}`;
+  }
   function handleLogout() {
     logout();
     routerNavigate('/login', { replace: true });
@@ -557,7 +673,7 @@ export function AdminDashboardPage() {
           <div class="panel-head">
             <div>
               <p class="eyebrow">Exploitants</p>
-              <h3>Invitations exploitants</h3>
+              <h3>Comptes exploitants</h3>
             </div>
             <div class="panel-actions panel-actions--wrap">
               <select class="form-select" value=${filters.carrierCity} onChange=${(e) => setFilters({ ...filters, carrierCity: e.target.value })}>
@@ -580,11 +696,13 @@ export function AdminDashboardPage() {
                         <td>${carrier.contactEmail || '—'}</td>
                         <td>${carrier.fleetSize}</td>
                         <td>${carrier.openAlerts}</td>
-                        <td><span class="badge ${carrier.status === 'Actif' ? 'badge--success' : carrier.status === 'En attente' ? 'badge--warning' : 'badge--neutral'}">${carrier.status}</span></td>
+                        <td><span class="badge ${carrier.enabled ? 'badge--success' : 'badge--danger'}">${carrier.enabled ? 'Actif' : 'Désactivé'}</span></td>
                         <td>
-                          ${carrier.status === 'En attente'
-                            ? html`<button class="ghost-button" type="button" onClick=${() => handleResendInvite(carrier.id)}>Renvoyer l'invitation</button>`
-                            : html`<span class="field-note">—</span>`}
+                          <div class="button-stack" style=${{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+                            <button class="ghost-button" type="button" onClick=${() => handleToggleEnabled(carrier.id, carrier.enabled)}>
+                              ${carrier.enabled ? 'Désactiver' : 'Activer'}
+                            </button>
+                          </div>
                         </td>
                       </tr>`
                     )
@@ -593,14 +711,15 @@ export function AdminDashboardPage() {
             </table>
           </div>
           <form class="admin-form" onSubmit=${handleAddCarrier}>
-            <h4>Inviter un exploitant</h4>
+            <h4>Créer un exploitant</h4>
             <div class="form-grid">
               <input data-testid="carrier-name" class="form-control" required placeholder="Nom de l'exploitant" value=${newCarrier.name} onInput=${(e) => setNewCarrier({ ...newCarrier, name: e.target.value })} />
               <input data-testid="carrier-city" class="form-control" required placeholder="Ville" value=${newCarrier.city} onInput=${(e) => setNewCarrier({ ...newCarrier, city: e.target.value })} />
               <input data-testid="carrier-email" class="form-control" type="email" required placeholder="Email contact" value=${newCarrier.contactEmail} onInput=${(e) => setNewCarrier({ ...newCarrier, contactEmail: e.target.value })} />
+              <input data-testid="carrier-password" class="form-control" type="password" required minLength="8" placeholder="Mot de passe (min 8 car.)" value=${newCarrier.password} onInput=${(e) => setNewCarrier({ ...newCarrier, password: e.target.value })} />
               <input data-testid="carrier-fleetSize" class="form-control" type="number" min="0" required placeholder="Taille de flotte (0 si inconnue)" value=${newCarrier.fleetSize} onInput=${(e) => setNewCarrier({ ...newCarrier, fleetSize: e.target.value })} />
             </div>
-            <button data-testid="carrier-submit" class="primary-button" type="submit">Envoyer invitation exploitant</button>
+            <button data-testid="carrier-submit" class="primary-button" type="submit">Créer exploitant</button>
           </form>
         </section>
 
@@ -608,7 +727,7 @@ export function AdminDashboardPage() {
           <div class="panel-head">
             <div>
               <p class="eyebrow">Conducteurs</p>
-              <h3>Invitations conducteurs</h3>
+              <h3>Comptes conducteurs</h3>
             </div>
             <div class="panel-actions panel-actions--wrap">
               <select class="form-select" value=${filters.driverStatus} onChange=${(e) => setFilters({ ...filters, driverStatus: e.target.value })}>
@@ -631,11 +750,13 @@ export function AdminDashboardPage() {
                         <td>${driver.email}</td>
                         <td>${driver.phone || '—'}</td>
                         <td>${driver.vehicle || '—'}</td>
-                        <td><span class="badge ${driver.status === 'Actif' ? 'badge--success' : driver.status === 'En attente' ? 'badge--warning' : 'badge--neutral'}">${driver.status}</span></td>
+                        <td><span class="badge ${driver.enabled ? 'badge--success' : 'badge--danger'}">${driver.enabled ? 'Actif' : 'Désactivé'}</span></td>
                         <td>
-                          ${driver.status === 'En attente'
-                            ? html`<button class="ghost-button" type="button" onClick=${() => handleResendInvite(driver.id)}>Renvoyer l'invitation</button>`
-                            : html`<span class="field-note">—</span>`}
+                          <div class="button-stack" style=${{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+                            <button class="ghost-button" type="button" onClick=${() => handleToggleEnabled(driver.id, driver.enabled)}>
+                              ${driver.enabled ? 'Désactiver' : 'Activer'}
+                            </button>
+                          </div>
                         </td>
                       </tr>`
                     )
@@ -644,7 +765,7 @@ export function AdminDashboardPage() {
             </table>
           </div>
           <form class="admin-form" onSubmit=${handleAddDriver}>
-            <h4>Inviter un conducteur</h4>
+            <h4>Créer un conducteur</h4>
             <div class="form-grid">
               <input data-testid="driver-name" class="form-control" required placeholder="Nom du conducteur" value=${newDriver.name} onInput=${(e) => setNewDriver({ ...newDriver, name: e.target.value })} />
               <select data-testid="driver-carrier" class="form-select" required value=${newDriver.carrierId} onChange=${(e) => setNewDriver({ ...newDriver, carrierId: e.target.value })}>
@@ -652,16 +773,61 @@ export function AdminDashboardPage() {
                 ${(tables.carriers || []).map((carrier) => html`<option value=${carrier.id}>${carrier.name}</option>`)}
               </select>
               <input data-testid="driver-email" class="form-control" required type="email" placeholder="Email" value=${newDriver.email} onInput=${(e) => setNewDriver({ ...newDriver, email: e.target.value })} />
+              <input data-testid="driver-password" class="form-control" type="password" required minLength="8" placeholder="Mot de passe (min 8 car.)" value=${newDriver.password} onInput=${(e) => setNewDriver({ ...newDriver, password: e.target.value })} />
               <input data-testid="driver-phone" class="form-control" placeholder="Téléphone" value=${newDriver.phone} onInput=${(e) => setNewDriver({ ...newDriver, phone: e.target.value })} />
-              <div class="form-field"><label class="form-label">Statut initial</label><div class="badge badge--warning">En attente</div></div>
             </div>
-            <button data-testid="driver-submit" class="primary-button" type="submit" disabled=${!(tables.carriers || []).length}>Envoyer invitation conducteur</button>
+            <button data-testid="driver-submit" class="primary-button" type="submit" disabled=${!(tables.carriers || []).length}>Créer conducteur</button>
               ${!(tables.carriers || []).length
                 ? html`<p class="field-note" data-testid="driver-create-blocker-note">Ajoutez d’abord un exploitant pour créer des conducteurs.</p>`
                 : ''}
           </form>
         </section>
-
+        <section class="panel" id="vehicle-form">
+          <div class="panel-head">
+            <div>
+              <p class="eyebrow">Véhicules</p>
+              <h3>Gestion des véhicules</h3>
+            </div>
+            <div class="panel-actions panel-actions--wrap">
+              <button class="ghost-button" type="button" onClick=${() => loadVehicles()}>Actualiser</button>
+            </div>
+          </div>
+          <div class="table-wrapper">
+            <table>
+              <thead><tr><th>Immatriculation</th><th>Marque</th><th>Modèle</th><th>Statut</th><th>Exploitant</th><th>Conducteur</th></tr></thead>
+              <tbody>
+                ${vehicles.length
+                  ? vehicles.map(
+                      (vehicle) => html`<tr data-testid="vehicle-row">
+                        <td>${vehicle.licensePlate}</td>
+                        <td>${vehicle.brand}</td>
+                        <td>${vehicle.model}</td>
+                        <td><span class="badge ${vehicle.status === 'ACTIVE' ? 'badge--success' : vehicle.status === 'MAINTENANCE' ? 'badge--warning' : 'badge--neutral'}">${vehicle.status || 'ACTIVE'}</span></td>
+                        <td>${getUserNameById(vehicle.managerId)}</td>
+                        <td>${getUserNameById(vehicle.carrierId)}</td>
+                      </tr>`
+                    )
+                  : emptyRow(6, 'Aucun véhicule pour le moment. Ajoutez-en un via le formulaire ci-dessous.')}
+              </tbody>
+            </table>
+          </div>
+          <form class="admin-form" onSubmit=${handleAddVehicle}>
+            <h4>Créer un véhicule</h4>
+            <div class="form-grid">
+              <input data-testid="vehicle-plate" class="form-control" required placeholder="Immatriculation (ex: AB-123-CD)" value=${newVehicle.licensePlate} onInput=${(e) => setNewVehicle({ ...newVehicle, licensePlate: e.target.value })} />
+              <input data-testid="vehicle-brand" class="form-control" required placeholder="Marque (ex: Renault)" value=${newVehicle.brand} onInput=${(e) => setNewVehicle({ ...newVehicle, brand: e.target.value })} />
+              <input data-testid="vehicle-model" class="form-control" required placeholder="Modèle (ex: Master)" value=${newVehicle.model} onInput=${(e) => setNewVehicle({ ...newVehicle, model: e.target.value })} />
+              <select data-testid="vehicle-manager" class="form-select" required value=${newVehicle.managerId} onChange=${(e) => setNewVehicle({ ...newVehicle, managerId: e.target.value })}>
+                <option value="">Choisir un exploitant</option>
+                ${(tables.carriers || []).map((carrier) => html`<option value=${carrier.id}>${carrier.name}</option>`)}
+              </select>
+            </div>
+            <button data-testid="vehicle-submit" class="primary-button" type="submit" disabled=${!(tables.carriers || []).length}>Créer véhicule</button>
+              ${!(tables.carriers || []).length
+                ? html`<p class="field-note">Ajoutez d'abord un exploitant pour créer des véhicules.</p>`
+                : ''}
+          </form>
+        </section>
         <section class="panel" id="users-panel">
           <div class="panel-head">
             <div>
@@ -671,13 +837,22 @@ export function AdminDashboardPage() {
           </div>
           <div class="table-wrapper">
             <table>
-              <thead><tr><th>Email</th><th>Profils</th><th>Statut</th></tr></thead>
+              <thead><tr><th>Email</th><th>Profils</th><th>Statut</th><th>Actions</th></tr></thead>
               <tbody>
                 ${users.length
                   ? users.map(
-                      (user) => html`<tr data-testid="user-row"><td>${user.email}</td><td>${(user.profiles || []).join(', ')}</td><td><span class="badge ${user.status === 'Actif' ? 'badge--success' : user.status === 'En attente' ? 'badge--warning' : 'badge--neutral'}">${user.status || 'Actif'}</span></td></tr>`
+                      (user) => html`<tr data-testid="user-row">
+                        <td>${user.email}</td>
+                        <td>${(user.profiles || []).join(', ')}</td>
+                        <td><span class="badge ${user.enabled ? 'badge--success' : 'badge--danger'}">${user.enabled ? 'Actif' : 'Désactivé'}</span></td>
+                        <td>
+                          <button class="ghost-button" type="button" onClick=${() => handleToggleEnabled(user.id, user.enabled)}>
+                            ${user.enabled ? 'Désactiver' : 'Activer'}
+                          </button>
+                        </td>
+                      </tr>`
                     )
-                  : emptyRow(3, 'Aucun utilisateur pour le moment. Les invitations créeront les comptes.')}
+                  : emptyRow(4, 'Aucun utilisateur pour le moment. Les invitations créeront les comptes.')}
               </tbody>
             </table>
           </div>
@@ -687,18 +862,27 @@ export function AdminDashboardPage() {
           <div class="panel-head">
             <div>
               <p class="eyebrow">Administrateurs</p>
-              <h3>Invitations administrateurs</h3>
+              <h3>Gestion des administrateurs</h3>
             </div>
           </div>
           <div class="table-wrapper">
             <table>
-              <thead><tr><th>Email</th><th>Profils</th><th>Statut</th></tr></thead>
+              <thead><tr><th>Email</th><th>Profils</th><th>Statut</th><th>Actions</th></tr></thead>
               <tbody>
                 ${admins.length
                   ? admins.map(
-                      (admin) => html`<tr data-testid="admin-row"><td>${admin.email}</td><td>${(admin.profiles || []).join(', ')}</td><td><span class="badge ${admin.status === 'Actif' ? 'badge--success' : 'badge--warning'}">${admin.status || 'Actif'}</span></td></tr>`
+                      (admin) => html`<tr data-testid="admin-row">
+                        <td>${admin.email}</td>
+                        <td>${(admin.profiles || []).join(', ')}</td>
+                        <td><span class="badge ${admin.enabled ? 'badge--success' : 'badge--danger'}">${admin.enabled ? 'Actif' : 'Désactivé'}</span></td>
+                        <td>
+                          <button class="ghost-button" type="button" onClick=${() => handleToggleEnabled(admin.id, admin.enabled)}>
+                            ${admin.enabled ? 'Désactiver' : 'Activer'}
+                          </button>
+                        </td>
+                      </tr>`
                     )
-                  : emptyRow(3, 'Aucun administrateur supplémentaire. Invitez-en un si nécessaire.')}
+                  : emptyRow(4, 'Aucun administrateur supplémentaire. Invitez-en un si nécessaire.')}
               </tbody>
             </table>
           </div>

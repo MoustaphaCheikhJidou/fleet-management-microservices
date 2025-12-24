@@ -57,11 +57,12 @@ function normalizeUsers(list = []) {
 function normalizeCarriers(list = []) {
   return (Array.isArray(list) ? list : []).map((item, idx) => ({
     id: item.id ?? idx + 101,
-    name: item.name ?? item.carrierName ?? item.label ?? 'Exploitant',
+    name: item.name ?? item.fullName ?? item.carrierName ?? item.label ?? 'Exploitant',
     city: item.city ?? item.location ?? '—',
     fleetSize: Math.max(0, Number(item.fleetSize ?? item.vehicles ?? item.size ?? 0)),
     contactEmail: item.contactEmail ?? item.email ?? '',
     openAlerts: Number(item.openAlerts ?? item.alerts ?? 0),
+    enabled: item.enabled ?? true,
     status: statusLabelFromBackend(item.status ?? item.accountStatus),
   }));
 }
@@ -69,12 +70,13 @@ function normalizeCarriers(list = []) {
 function normalizeDrivers(list = []) {
   return (Array.isArray(list) ? list : []).map((item, idx) => ({
     id: item.id ?? idx + 201,
-    name: item.name ?? `${item.firstName || 'Conducteur'} ${item.lastName || ''}`.trim(),
+    name: item.name ?? item.fullName ?? `${item.firstName || 'Conducteur'} ${item.lastName || ''}`.trim(),
     carrier: item.carrier ?? item.company ?? item.fleet ?? 'Exploitant',
     email: item.email ?? 'contact@noreply.local',
     phone: item.phone ?? item.tel ?? '',
     vehicle: item.vehicle ?? item.vehicleId ?? '',
     lastActivity: item.lastActivity ?? item.lastSeen ?? 'À planifier',
+    enabled: item.enabled ?? true,
     status: statusLabelFromBackend(item.status ?? item.accountStatus),
   }));
 }

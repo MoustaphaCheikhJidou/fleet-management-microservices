@@ -4,6 +4,7 @@ import com.iam.service.domain.model.aggregates.User;
 import com.iam.service.domain.model.commands.ChangeEmailCommand;
 import com.iam.service.domain.model.commands.ChangePasswordCommand;
 import com.iam.service.domain.model.commands.CreateAdminUserCommand;
+import com.iam.service.domain.model.commands.CreateUserDirectCommand;
 import com.iam.service.domain.model.commands.InviteUserCommand;
 import com.iam.service.domain.model.commands.RegisterCarrierCommand;
 import com.iam.service.domain.model.commands.ResendInviteCommand;
@@ -80,6 +81,15 @@ public interface UserCommandService {
      * @return the updated user if present
      */
     Optional<User> handle(UpdateUserStatusCommand command);
+
+    /**
+     * Handle direct user creation by admin (with password).
+     * Creates CARRIER or DRIVER accounts that are immediately active.
+     *
+     * @param command the command with user data including password
+     * @return the created user
+     */
+    Optional<User> handle(CreateUserDirectCommand command);
 
     /**
      * Handle admin-driven user invitation.

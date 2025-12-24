@@ -7,6 +7,7 @@ import com.iam.service.domain.model.aggregates.User;
 import com.iam.service.domain.model.commands.ChangeEmailCommand;
 import com.iam.service.domain.model.commands.ChangePasswordCommand;
 import com.iam.service.domain.model.commands.CreateAdminUserCommand;
+import com.iam.service.domain.model.commands.CreateUserDirectCommand;
 import com.iam.service.domain.model.commands.InviteUserCommand;
 import com.iam.service.domain.model.commands.RegisterCarrierCommand;
 import com.iam.service.domain.model.commands.ResendInviteCommand;
@@ -222,7 +223,62 @@ public class UserCommandServiceImpl implements UserCommandService {
         var user = userRepository.findById(command.userId())
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Utilisateur introuvable"));
         user.setEnabled(command.enabled());
+        
+        // When activating a user, also set their account status to ACTIVE
+        if (command.enabled()) {
+            user.setStatus(AccountStatus.ACTIVE);
+        } else {
+            user.setStatus(AccountStatus.DISABLED);
+        }
+        
         var savedUser = userRepository.save(user);
+        return Optional.of(savedUser);
+    }
+
+    @Override
+    public Optional<User> handle(CreateUserDirectCommand command) {
+        if (command.email() == null || command.email().isBlank()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Email requis");
+        }
+        if (command.password() == null || command.password().length() < 8) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Mot de passe requis (min 8 caractères)");
+        }
+        if (command.role() == null || command.role().isBlank()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Rôle requis (CARRIER ou DRIVER)");
+        }
+
+        String roleUpperCase = command.role().toUpperCase();
+        Roles targetRole;
+        if ("CARRIER".equals(roleUpperCase)) {
+            targetRole = Roles.ROLE_CARRIER;
+        } else if ("DRIVER".equals(roleUpperCase)) {
+            targetRole = Roles.ROLE_DRIVER;
+        } else {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Rôle invalide: " + command.role() + " (attendu: CARRIER ou DRIVER)");
+        }
+
+        if (userRepository.existsByEmail(command.email())) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "Email déjà utilisé");
+        }
+
+        String username = (command.fullName() != null && !command.fullName().isBlank())
+                ? command.fullName().trim()
+                : command.email();
+
+        if (userRepository.existsByUsername(username)) {
+            username = command.email(); // fallback to email if name is taken
+        }
+
+        var role = roleRepository.findByName(targetRole)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST, targetRole + " introuvable"));
+
+        var newUser = new User(command.email(), username, hashingService.encode(command.password()), List.of(role));
+        newUser.setEnabled(true);
+        newUser.setStatus(AccountStatus.ACTIVE);
+
+        var savedUser = userRepository.save(newUser);
+        log.info("Compte {} créé directement par admin: {} ({})", targetRole, savedUser.getEmail(), savedUser.getUsername());
+        publishUserCreatedEvent(savedUser, "admin-direct-create");
         return Optional.of(savedUser);
     }
 

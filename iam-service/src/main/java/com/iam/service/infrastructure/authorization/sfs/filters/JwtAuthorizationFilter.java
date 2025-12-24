@@ -39,6 +39,32 @@ public class JwtAuthorizationFilter extends OncePerRequestFilter {
     protected void doFilterInternal(HttpServletRequest request,
                                     HttpServletResponse response,
                                     FilterChain filterChain) throws ServletException, IOException {
+        
+        // First check if gateway has already authenticated (via X-User-* headers)
+        String gatewayUserEmail = request.getHeader("X-User-Email");
+        String gatewayUserRoles = request.getHeader("X-User-Roles");
+        
+        if (StringUtils.hasText(gatewayUserEmail) && StringUtils.hasText(gatewayUserRoles) 
+                && SecurityContextHolder.getContext().getAuthentication() == null) {
+            // Gateway has pre-authenticated this request
+            try {
+                UserDetails userDetails = userDetailsService.loadUserByUsername(gatewayUserEmail);
+                UsernamePasswordAuthenticationToken authentication =
+                        new UsernamePasswordAuthenticationToken(
+                                userDetails,
+                                null,
+                                userDetails.getAuthorities());
+                authentication.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
+                SecurityContextHolder.getContext().setAuthentication(authentication);
+                LOGGER.debug("Authenticated user {} via Gateway headers", gatewayUserEmail);
+                filterChain.doFilter(request, response);
+                return;
+            } catch (Exception exception) {
+                LOGGER.warn("Failed to authenticate user {} via Gateway headers: {}", gatewayUserEmail, exception.getMessage());
+            }
+        }
+        
+        // Fallback to JWT token authentication
         String authHeader = request.getHeader(HttpHeaders.AUTHORIZATION);
 
         if (StringUtils.hasText(authHeader) && authHeader.startsWith("Bearer ")) {

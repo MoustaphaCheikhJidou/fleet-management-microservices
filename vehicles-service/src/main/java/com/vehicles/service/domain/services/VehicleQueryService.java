@@ -53,4 +53,11 @@ public interface VehicleQueryService {
      * @return the number of vehicles
      */
     int countVehiclesByManagerId(Long managerId);
+
+    /**
+     * Get all vehicles (admin only)
+     *
+     * @return list of all vehicles
+     */
+    List<Vehicle> getAllVehicles();
 }

@@ -7,6 +7,7 @@ import com.vehicles.service.domain.model.queries.GetVehiclesByManagerIdQuery;
 import com.vehicles.service.domain.model.valueobjects.VehicleStatus;
 import com.vehicles.service.domain.services.VehicleCommandService;
 import com.vehicles.service.domain.services.VehicleQueryService;
+import com.vehicles.service.interfaces.rest.resources.CreateVehicleAdminResource;
 import com.vehicles.service.interfaces.rest.resources.CreateVehicleResource;
 import com.vehicles.service.interfaces.rest.resources.UpdateVehicleResource;
 import com.vehicles.service.interfaces.rest.resources.VehicleResource;
@@ -73,6 +74,62 @@ public class VehiclesController {
         var vehicle = vehicleCommandService.handle(command);
         var vehicleResource = VehicleResourceFromEntityAssembler.toResourceFromEntity(vehicle);
         return ResponseEntity.status(HttpStatus.CREATED).body(vehicleResource);
+    }
+
+    /**
+     * Create a new vehicle as admin.
+     * Only admins can use this endpoint.
+     * @param resource the CreateVehicleAdminResource containing the vehicle data including managerId.
+     * @return ResponseEntity containing the created VehicleResource if successful, or an error response.
+     */
+    @PostMapping("/admin/create")
+    @Operation(summary = "Create a new vehicle as admin")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "201", description = "Vehicle created successfully"),
+            @ApiResponse(responseCode = "400", description = "Invalid vehicle data provided"),
+            @ApiResponse(responseCode = "403", description = "User not authorized (admin only)")
+    })
+    public ResponseEntity<VehicleResource> createVehicleAsAdmin(
+            @Valid @RequestBody CreateVehicleAdminResource resource,
+            HttpServletRequest request) {
+        if (!hasRole(request, "ADMIN")) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
+        }
+
+        var command = new com.vehicles.service.domain.model.commands.CreateVehicleCommand(
+                resource.licensePlate(),
+                resource.brand(),
+                resource.model(),
+                resource.managerId()
+        );
+        var vehicle = vehicleCommandService.handle(command);
+        var vehicleResource = VehicleResourceFromEntityAssembler.toResourceFromEntity(vehicle);
+        return ResponseEntity.status(HttpStatus.CREATED).body(vehicleResource);
+    }
+
+    /**
+     * Get all vehicles (admin only).
+     * @return ResponseEntity containing a list of all VehicleResource.
+     */
+    @GetMapping("/admin/all")
+    @Operation(summary = "Get all vehicles (Admin only)")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Vehicles retrieved successfully"),
+            @ApiResponse(responseCode = "204", description = "No vehicles found"),
+            @ApiResponse(responseCode = "403", description = "User not authorized (admin only)")
+    })
+    public ResponseEntity<List<VehicleResource>> getAllVehiclesAsAdmin(HttpServletRequest request) {
+        if (!hasRole(request, "ADMIN")) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
+        }
+
+        var vehicles = vehicleQueryService.getAllVehicles();
+        if (vehicles.isEmpty()) {
+            return ResponseEntity.noContent().build();
+        }
+
+        var resources = VehicleResourceFromEntityAssembler.toResourceFromEntities(vehicles);
+        return ResponseEntity.ok(resources);
     }
 
     /**

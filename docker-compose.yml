@@ -239,17 +239,6 @@ services:
       - "8080:8080"
     restart: unless-stopped
 
-  frontend-ui:
-    build:
-      context: ./frontend
-      dockerfile: Dockerfile
-    container_name: fleet-frontend-ui
-    depends_on:
-      gateway-service:
-        condition: service_started
-    ports:
-      - "8083:80"
-    restart: unless-stopped
 
   frontend-react-ui:
     build:

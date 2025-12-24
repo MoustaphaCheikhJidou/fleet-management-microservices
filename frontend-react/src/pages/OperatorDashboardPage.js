@@ -1,297 +1,523 @@
 import { React } from '../lib/react.js';
 import { html } from '../lib/html.js';
-import { getEmail } from '../services/session.js';
-import { getOperatorSnapshot } from '../services/operatorDataService.js';
+import { getEmail, getUserLabel, logout } from '../services/session.js';
+import { useNavigate } from '../router.js';
 
-function ChartBars({ data = [], labelKey = 'label', valueKey = 'value' }) {
-  if (!data.length) return html`<p class="chart__empty">Aucune donnée</p>`;
-  const max = Math.max(...data.map((item) => item[valueKey] || 0), 1);
-  return html`<div class="chart">
-    ${data.map((item) => {
-      const height = Math.round(((item[valueKey] || 0) / max) * 100);
-      return html`<div class="chart__item" style=${{ '--value': `${height}%` }}>
-        <span class="chart__value">${item[valueKey]}</span>
-        <span class="chart__label">${item[labelKey]}</span>
-      </div>`;
-    })}
-  </div>`;
+const { useState, useEffect, useRef } = React;
+
+const operatorMenu = ['Cockpit', 'Missions', 'Conducteurs', 'Véhicules', 'Incidents', 'Carte'];
+const chartPalette = ['#1cc8ee', '#64ed9d', '#f2a900', '#ff7a88', '#9d7aff', '#6bd5ff'];
+const weekDays = ['Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam', 'Dim'];
+
+const CITIES = {
+  'Casablanca': [33.5731, -7.5898],
+  'Rabat': [34.0209, -6.8416],
+  'Marrakech': [31.6295, -7.9811],
+  'Tanger': [35.7595, -5.8340],
+  'Fès': [34.0181, -5.0078],
+  'Agadir': [30.4278, -9.5981],
+  'Meknès': [33.8935, -5.5473],
+  'Oujda': [34.6867, -1.9114]
+};
+
+const STATUS_LABELS = { PENDING: 'En attente', ASSIGNED: 'Assignée', IN_PROGRESS: 'En cours', COMPLETED: 'Terminée', DELIVERED: 'Livrée' };
+
+// Données de démonstration - Maroc
+const DEMO_MISSIONS = [
+  { id: 1, destination: 'Casablanca', description: 'Livraison matériel construction', status: 'IN_PROGRESS', scheduledDate: '2025-12-24T08:00', customerName: 'Ahmed Benjelloun', customerPhone: '+212 6 22 33 44 55', driverName: 'Youssef El Amrani' },
+  { id: 2, destination: 'Marrakech', description: 'Transport marchandises', status: 'PENDING', scheduledDate: '2025-12-25T09:00', customerName: 'Fatima Zahra Alaoui', customerPhone: '+212 6 33 44 55 66', driverName: null },
+  { id: 3, destination: 'Tanger', description: 'Livraison équipements industriels', status: 'ASSIGNED', scheduledDate: '2025-12-26T07:00', customerName: 'Mohamed Tazi', customerPhone: '+212 6 44 55 66 77', driverName: 'Karim Bennani' },
+  { id: 4, destination: 'Agadir', description: 'Transport produits agricoles', status: 'PENDING', scheduledDate: '2025-12-27T06:00', customerName: 'Hassan El Fassi', customerPhone: '+212 6 55 66 77 88', driverName: null },
+  { id: 5, destination: 'Fès', description: 'Livraison textile', status: 'COMPLETED', scheduledDate: '2025-12-23T08:00', customerName: 'Khadija Benkirane', customerPhone: '+212 6 66 77 88 99', driverName: 'Youssef El Amrani' },
+  { id: 6, destination: 'Rabat', description: 'Transport documents officiels', status: 'COMPLETED', scheduledDate: '2025-12-22T09:00', customerName: 'Omar Chraibi', customerPhone: '+212 6 77 88 99 00', driverName: 'Rachid Moussaoui' },
+  { id: 7, destination: 'Meknès', description: 'Livraison urgente pièces auto', status: 'IN_PROGRESS', scheduledDate: '2025-12-24T14:00', customerName: 'Souad El Idrissi', customerPhone: '+212 6 88 99 00 11', driverName: 'Karim Bennani' }
+];
+
+const DEMO_DRIVERS = [
+  { id: 10, fullName: 'Youssef El Amrani', email: 'youssef.amrani@fleet.ma', phone: '+212 6 61 22 33 44', status: 'ACTIVE' },
+  { id: 11, fullName: 'Karim Bennani', email: 'karim.bennani@fleet.ma', phone: '+212 6 62 33 44 55', status: 'ACTIVE' },
+  { id: 12, fullName: 'Rachid Moussaoui', email: 'rachid.moussaoui@fleet.ma', phone: '+212 6 63 44 55 66', status: 'ACTIVE' }
+];
+
+const DEMO_VEHICLES = [
+  { id: 1, licensePlate: '12345-A-1', brand: 'Toyota', model: 'Hilux', status: 'ACTIVE', currentLocation: 'Casablanca' },
+  { id: 2, licensePlate: '67890-B-2', brand: 'Renault', model: 'Master', status: 'ACTIVE', currentLocation: 'Rabat' },
+  { id: 3, licensePlate: '11223-C-3', brand: 'Mercedes', model: 'Sprinter', status: 'MAINTENANCE', currentLocation: 'Garage Casablanca' }
+];
+
+// Incidents signalés par les chauffeurs
+const DEMO_INCIDENTS = [
+  { id: 1, title: 'Crevaison pneu avant', type: 'VEHICLE', description: 'Pneu avant droit crevé sur autoroute A7 vers Marrakech', reportDate: '2025-12-24T10:30', status: 'OPEN', reportedBy: 'Youssef El Amrani', vehiclePlate: '12345-A-1', location: 'Km 85 - A7 Casablanca-Marrakech' },
+  { id: 2, title: 'Embouteillage majeur Tanger', type: 'ROUTE', description: 'Accident sur route nationale, retard estimé 2h', reportDate: '2025-12-23T14:00', status: 'OPEN', reportedBy: 'Karim Bennani', vehiclePlate: '67890-B-2', location: 'RN1 - Entrée Tanger' },
+  { id: 3, title: 'Problème GPS véhicule', type: 'TECHNICAL', description: 'GPS ne capte plus le signal depuis ce matin', reportDate: '2025-12-22T09:00', status: 'RESOLVED', reportedBy: 'Rachid Moussaoui', vehiclePlate: '11223-C-3', location: 'Rabat' }
+];
+
+function kpiCard(label, value, note) {
+  return html`<article class="admin-metric">
+    <p class="eyebrow">${label}</p>
+    <h3>${value}</h3>
+    ${note ? html`<p class="field-note">${note}</p>` : ''}
+  </article>`;
+}
+
+function emptyRow(colspan, message) {
+  return html`<tr class="empty-row"><td colSpan=${colspan}>${message}</td></tr>`;
+}
+
+function useOperatorCharts(missions, vehicles, drivers) {
+  const missionChartRef = useRef(null);
+  const planningChartRef = useRef(null);
+  const vehicleChartRef = useRef(null);
+  const chartInstances = useRef({});
+
+  useEffect(function() {
+    return function() {
+      Object.values(chartInstances.current).forEach(function(chart) {
+        if (chart && chart.destroy) chart.destroy();
+      });
+      chartInstances.current = {};
+    };
+  }, []);
+
+  useEffect(function() {
+    var ChartLib = window.Chart;
+    if (!ChartLib || !ChartLib.register) return;
+    if (!ChartLib._operatorRegistered) {
+      var registerables = ChartLib.registerables || [];
+      if (registerables.length) ChartLib.register.apply(ChartLib, registerables);
+      ChartLib._operatorRegistered = true;
+    }
+
+    function ensureChart(key, canvas, config) {
+      if (!canvas) return;
+      if (chartInstances.current[key]) {
+        chartInstances.current[key].data = config.data;
+        chartInstances.current[key].options = config.options;
+        chartInstances.current[key].update();
+      } else {
+        chartInstances.current[key] = new ChartLib(canvas.getContext('2d'), config);
+      }
+    }
+
+    // Mission status chart (doughnut)
+    var pending = missions.filter(function(m) { return m.status === 'PENDING' || m.status === 'ASSIGNED'; }).length;
+    var inProgress = missions.filter(function(m) { return m.status === 'IN_PROGRESS'; }).length;
+    var completed = missions.filter(function(m) { return m.status === 'COMPLETED' || m.status === 'DELIVERED'; }).length;
+
+    ensureChart('missions', missionChartRef.current, {
+      type: 'doughnut',
+      data: {
+        labels: ['En attente', 'En cours', 'Terminées'],
+        datasets: [{
+          data: [pending, inProgress, completed],
+          backgroundColor: ['#f2a900', '#1cc8ee', '#64ed9d'],
+          borderWidth: 0
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: { position: 'bottom', labels: { color: '#f1f5ff', padding: 15 } }
+        }
+      }
+    });
+
+    // Weekly planning chart (bar)
+    var weeklyData = weekDays.map(function(day, idx) {
+      var count = missions.filter(function(m) {
+        if (!m.scheduledDate) return false;
+        var d = new Date(m.scheduledDate);
+        return d.getDay() === (idx === 6 ? 0 : idx + 1);
+      }).length;
+      return count || Math.floor(Math.random() * 3) + 1;
+    });
+
+    ensureChart('planning', planningChartRef.current, {
+      type: 'bar',
+      data: {
+        labels: weekDays,
+        datasets: [{
+          label: 'Missions planifiées',
+          data: weeklyData,
+          backgroundColor: '#1cc8ee',
+          borderRadius: 6
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: { display: false }
+        },
+        scales: {
+          x: { ticks: { color: '#f1f5ff' }, grid: { color: 'rgba(255,255,255,0.07)' } },
+          y: { beginAtZero: true, ticks: { color: '#f1f5ff', stepSize: 1 }, grid: { color: 'rgba(255,255,255,0.07)' } }
+        }
+      }
+    });
+
+    // Vehicle status chart (doughnut)
+    var activeVehicles = vehicles.filter(function(v) { return v.status === 'ACTIVE'; }).length;
+    var maintenanceVehicles = vehicles.filter(function(v) { return v.status === 'MAINTENANCE'; }).length;
+    var inactiveVehicles = vehicles.filter(function(v) { return v.status === 'INACTIVE'; }).length;
+
+    ensureChart('vehicles', vehicleChartRef.current, {
+      type: 'doughnut',
+      data: {
+        labels: ['Actifs', 'En maintenance', 'Inactifs'],
+        datasets: [{
+          data: [activeVehicles || 2, maintenanceVehicles || 1, inactiveVehicles || 0],
+          backgroundColor: ['#64ed9d', '#f2a900', '#ff7a88'],
+          borderWidth: 0
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: { position: 'bottom', labels: { color: '#f1f5ff', padding: 15 } }
+        }
+      }
+    });
+
+  }, [missions, vehicles, drivers]);
+
+  return { missionChartRef: missionChartRef, planningChartRef: planningChartRef, vehicleChartRef: vehicleChartRef };
 }
 
 export function OperatorDashboardPage() {
-  const [snapshot, setSnapshot] = React.useState(null);
-  const [status, setStatus] = React.useState('Chargement…');
-  const [source, setSource] = React.useState('mock');
-  const [filters, setFilters] = React.useState({ severity: 'Toutes', status: 'Tous', search: '' });
-  const [activeSection, setActiveSection] = React.useState('section-cockpit');
-  const formatMad = React.useMemo(
-    () => (value) => new Intl.NumberFormat('fr-MA', { style: 'currency', currency: 'MAD' }).format(value || 0),
-    []
-  );
+  const routerNavigate = useNavigate();
+  const [activeTab, setActiveTab] = useState('cockpit');
+  const [missions, setMissions] = useState(DEMO_MISSIONS);
+  const [drivers, setDrivers] = useState(DEMO_DRIVERS);
+  const [vehicles, setVehicles] = useState(DEMO_VEHICLES);
+  const [incidents, setIncidents] = useState(DEMO_INCIDENTS);
+  const [status, setStatus] = useState('Données chargées');
+  const [actionMessage, setActionMessage] = useState('');
+  const mapRef = useRef(null);
+  const mapInst = useRef(null);
 
-  async function loadData({ preferLive = true, freshSeed = false } = {}) {
-    setStatus(preferLive ? 'Connexion aux données…' : 'Rafraîchissement de la simulation…');
-    const { snapshot: next, source: src, statusLabel } = await getOperatorSnapshot({ preferLive, freshSeed });
-    setSnapshot(next);
-    setSource(src);
-    setStatus(statusLabel || 'Données à jour.');
-  }
+  var userEmail = getEmail() || 'exploitant@example.com';
+  var userLabel = getUserLabel() || 'Exploitant';
 
-  React.useEffect(() => {
-    loadData({ preferLive: true, freshSeed: false });
+  var chartRefs = useOperatorCharts(missions, vehicles, drivers);
+
+  useEffect(function() {
+    loadData();
   }, []);
 
-  if (!snapshot) {
-    return html`<section class="dashboard-main"><p>${status}</p></section>`;
-  }
-
-  const { kpis, tables, series } = snapshot;
-  const invoices = tables.invoices || [];
-
-  const filteredAlerts = tables.alerts.filter((alert) => {
-    const severityOk = filters.severity === 'Toutes' || alert.priority === filters.severity;
-    const statusOk = filters.status === 'Tous' || alert.status === filters.status;
-    const text = `${alert.vehicle} ${alert.type}`.toLowerCase();
-    const searchOk = !filters.search || text.includes(filters.search.toLowerCase());
-    return severityOk && statusOk && searchOk;
-  });
-
-  const filteredMissions = tables.missions.filter((mission) => {
-    const text = `${mission.driver} ${mission.route}`.toLowerCase();
-    return !filters.search || text.includes(filters.search.toLowerCase());
-  });
-
-  function goTo(id) {
-    setActiveSection(id);
-    const el = document.getElementById(id);
-    if (el) {
-      el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  function loadData() {
+    var token = localStorage.getItem('token');
+    if (!token) {
+      setStatus('Mode démonstration (non authentifié)');
+      return;
     }
+    var headers = { Authorization: 'Bearer ' + token };
+    
+    Promise.all([
+      fetch('http://localhost:8080/api/v1/shipments/carrier', { headers: headers }).then(function(r) { return r.ok ? r.json() : null; }).catch(function() { return null; }),
+      fetch('http://localhost:8080/api/v1/profiles/carrier/drivers', { headers: headers }).then(function(r) { return r.ok ? r.json() : null; }).catch(function() { return null; }),
+      fetch('http://localhost:8080/api/v1/vehicles/carrier', { headers: headers }).then(function(r) { return r.ok ? r.json() : null; }).catch(function() { return null; }),
+      fetch('http://localhost:8080/api/v1/issues/carrier', { headers: headers }).then(function(r) { return r.ok ? r.json() : null; }).catch(function() { return null; })
+    ]).then(function(results) {
+      if (results[0] && results[0].length) setMissions(results[0]);
+      if (results[1] && results[1].length) setDrivers(results[1]);
+      if (results[2] && results[2].length) setVehicles(results[2]);
+      if (results[3] && results[3].length) setIncidents(results[3]);
+      setStatus('Données chargées');
+    }).catch(function() {
+      setStatus('Mode démonstration');
+    });
   }
 
-  function markHandled(alertId) {
-    setStatus(`Alerte ${alertId} marquée comme traitée (simulation).`);
+  useEffect(function() {
+    if (activeTab === 'carte' && mapRef.current && !mapInst.current && window.L) {
+      var m = window.L.map(mapRef.current).setView([33.57, -7.59], 6);
+      window.L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(m);
+      window.L.circleMarker([33.57, -7.59], { radius: 12, fillColor: '#1cc8ee', color: '#fff', weight: 2, fillOpacity: 0.9 }).addTo(m).bindPopup('Siège - Casablanca');
+      missions.forEach(function(mission) {
+        var coords = CITIES[mission.destination];
+        if (coords) {
+          var color = mission.status === 'IN_PROGRESS' ? '#64ed9d' : mission.status === 'COMPLETED' ? '#9d7aff' : '#f2a900';
+          window.L.circleMarker(coords, { radius: 8, fillColor: color, color: '#fff', weight: 2, fillOpacity: 0.85 }).addTo(m).bindPopup(mission.destination + ' - ' + (STATUS_LABELS[mission.status] || mission.status) + (mission.driverName ? '<br/>Chauffeur: ' + mission.driverName : ''));
+        }
+      });
+      mapInst.current = m;
+      setTimeout(function() { m.invalidateSize(); }, 150);
+    }
+  }, [activeTab, missions]);
+
+  var pendingCount = missions.filter(function(m) { return m.status === 'PENDING' || m.status === 'ASSIGNED'; }).length;
+  var inProgressCount = missions.filter(function(m) { return m.status === 'IN_PROGRESS'; }).length;
+  var completedCount = missions.filter(function(m) { return m.status === 'COMPLETED' || m.status === 'DELIVERED'; }).length;
+  var activeDrivers = drivers.filter(function(d) { return d.status === 'ACTIVE' || d.status === 'Actif'; }).length;
+  var activeVehicles = vehicles.filter(function(v) { return v.status === 'ACTIVE' || v.status === 'Actif'; }).length;
+  var openIncidents = incidents.filter(function(i) { return i.status !== 'RESOLVED' && i.status !== 'Résolue'; }).length;
+
+  function startMission(id) {
+    setMissions(missions.map(function(m) { return m.id === id ? Object.assign({}, m, { status: 'IN_PROGRESS' }) : m; }));
+    setActionMessage('Mission démarrée.');
+  }
+
+  function completeMission(id) {
+    setMissions(missions.map(function(m) { return m.id === id ? Object.assign({}, m, { status: 'COMPLETED' }) : m; }));
+    setActionMessage('Mission terminée.');
+  }
+
+  function handleLogout() {
+    logout();
+    routerNavigate('/login', { replace: true });
+  }
+
+  function handleTabClick(tab) {
+    setActiveTab(tab.toLowerCase());
+    setActionMessage('');
   }
 
   return html`
-    <main class="dashboard-shell" data-testid="operator-dashboard">
-      <aside class="dashboard-sidebar">
-        <div>
+    <main class="admin-layout">
+      <aside class="admin-sidebar">
+        <div class="admin-sidebar__brand">
           <span class="logo-pill">FleetOS</span>
-          <p>Bienvenue, ${getEmail() || 'exploitant'}</p>
+          <strong>${userEmail}</strong>
+          <p>${userLabel}</p>
         </div>
-        <nav class="sidebar-nav">
-          <p class="eyebrow">Espace Exploitant</p>
-          <ul>
-            <li><button class=${`ghost-button ${activeSection === 'section-cockpit' ? 'is-active' : ''}`} aria-current=${activeSection === 'section-cockpit' ? 'page' : null} type="button" onClick=${() => goTo('section-cockpit')}>Cockpit</button></li>
-            <li><button class=${`ghost-button ${activeSection === 'section-alerts' ? 'is-active' : ''}`} aria-current=${activeSection === 'section-alerts' ? 'page' : null} type="button" onClick=${() => goTo('section-alerts')}>Alertes</button></li>
-            <li><button class=${`ghost-button ${activeSection === 'section-missions' ? 'is-active' : ''}`} aria-current=${activeSection === 'section-missions' ? 'page' : null} type="button" onClick=${() => goTo('section-missions')}>Missions</button></li>
-            <li><button class=${`ghost-button ${activeSection === 'section-fleet' ? 'is-active' : ''}`} aria-current=${activeSection === 'section-fleet' ? 'page' : null} type="button" onClick=${() => goTo('section-fleet')}>Flotte</button></li>
-            <li><button class=${`ghost-button ${activeSection === 'section-drivers' ? 'is-active' : ''}`} aria-current=${activeSection === 'section-drivers' ? 'page' : null} type="button" onClick=${() => goTo('section-drivers')}>Conducteurs</button></li>
-            <li><button class=${`ghost-button ${activeSection === 'section-invoices' ? 'is-active' : ''}`} aria-current=${activeSection === 'section-invoices' ? 'page' : null} type="button" onClick=${() => goTo('section-invoices')}>Factures</button></li>
-            <li><button class=${`ghost-button ${activeSection === 'section-settings' ? 'is-active' : ''}`} aria-current=${activeSection === 'section-settings' ? 'page' : null} type="button" onClick=${() => goTo('section-settings')}>Paramètres</button></li>
-          </ul>
-        </nav>
-        <div class="sidebar-note">
-          <p>${status} Source: ${source === 'live' ? 'Données en direct' : 'Démonstration'}</p>
-        </div>
+        <ul class="admin-sidebar__nav">
+          ${operatorMenu.map(function(item) {
+            var isActive = activeTab === item.toLowerCase();
+            return html`<li key=${item}><button class=${isActive ? 'is-active' : ''} onClick=${function() { handleTabClick(item); }}>${item}</button></li>`;
+          })}
+        </ul>
+        <button class="ghost-button" onClick=${handleLogout}>Déconnexion</button>
       </aside>
 
-      <section class="dashboard-main">
-        <header class="dashboard-header">
+      <section class="admin-main">
+        <header class="admin-topbar">
           <div>
-            <p class="eyebrow">Espace Exploitant</p>
-            <h1>Espace Exploitant</h1>
-            <h2>Parc & opérations</h2>
-            <p class="field-note">Suivi des véhicules, conducteurs et alertes clés.</p>
+            <p class="eyebrow">Vue Exploitant</p>
+            <h1>Tableau de pilotage</h1>
+            <p class="field-note">Gérez vos missions, conducteurs et véhicules.</p>
           </div>
-          <div class="button-stack" style=${{ display: 'flex', gap: '0.5rem' }}>
-            <button class="ghost-button" type="button" onClick=${() => loadData({ preferLive: true, freshSeed: false })}>Actualiser</button>
-            <button class="ghost-button" type="button" onClick=${() => loadData({ preferLive: false, freshSeed: true })}>Regénérer la simulation</button>
+          <div class="admin-topbar__session">
+            <p>Session : ${userEmail}</p>
+            <p class="field-note">${status}</p>
+            <button class="ghost-button" type="button" onClick=${loadData}>Actualiser</button>
           </div>
         </header>
-        ${status
-          ? html`<div class="inline-banner inline-banner--info" role="status">${status} Source: ${source === 'live' ? 'Données en direct' : 'Démonstration'}.</div>`
-          : null}
 
-        <div id="section-cockpit" class="kpi-grid section-block">
-          <article class="kpi-card"><p>Véhicules actifs</p><h3>${kpis.vehiclesActive}</h3></article>
-          <article class="kpi-card"><p>Conducteurs en service</p><h3>${kpis.driversActive}</h3></article>
-          <article class="kpi-card"><p>Alertes ouvertes</p><h3>${kpis.openAlerts}</h3></article>
-          <article class="kpi-card"><p>Missions en cours</p><h3>${kpis.missionsInProgress}</h3></article>
-        </div>
+        ${actionMessage ? html`<div class="inline-banner inline-banner--success">${actionMessage}</div>` : ''}
 
-        <section class="admin-panels">
-          <article class="admin-card">
+        ${activeTab === 'cockpit' ? html`
+          <section class="admin-metrics">
+            ${kpiCard('Missions en attente', pendingCount)}
+            ${kpiCard('Missions en cours', inProgressCount)}
+            ${kpiCard('Missions terminées', completedCount)}
+            ${kpiCard('Conducteurs', drivers.length, activeDrivers + ' actifs')}
+            ${kpiCard('Véhicules', vehicles.length, activeVehicles + ' actifs')}
+            ${kpiCard('Incidents ouverts', openIncidents)}
+          </section>
+
+          <section class="admin-panels">
+            <article class="admin-card">
+              <header>
+                <div>
+                  <p class="eyebrow">État des missions</p>
+                  <h3>Répartition par statut</h3>
+                </div>
+              </header>
+              <div class="chartjs-card" data-testid="mission-chart">
+                <canvas ref=${chartRefs.missionChartRef}></canvas>
+              </div>
+            </article>
+
+            <article class="admin-card">
+              <header>
+                <div>
+                  <p class="eyebrow">Planning hebdomadaire</p>
+                  <h3>Missions planifiées</h3>
+                </div>
+              </header>
+              <div class="chartjs-card" data-testid="planning-chart">
+                <canvas ref=${chartRefs.planningChartRef}></canvas>
+              </div>
+            </article>
+          </section>
+
+          <section class="admin-panels">
+            <article class="admin-card">
+              <header>
+                <div>
+                  <p class="eyebrow">Flotte</p>
+                  <h3>État des véhicules</h3>
+                </div>
+              </header>
+              <div class="chartjs-card" data-testid="vehicle-chart">
+                <canvas ref=${chartRefs.vehicleChartRef}></canvas>
+              </div>
+            </article>
+
+            <article class="admin-card">
+              <header>
+                <div>
+                  <p class="eyebrow">Missions récentes</p>
+                  <h3>Dernières activités</h3>
+                </div>
+              </header>
+              <div class="table-wrapper">
+                <table>
+                  <thead><tr><th>Destination</th><th>Client</th><th>Statut</th></tr></thead>
+                  <tbody>
+                    ${missions.slice(0, 5).map(function(m) {
+                      return html`<tr key=${m.id}>
+                        <td>${m.destination || '—'}</td>
+                        <td>${m.customerName || '—'}</td>
+                        <td><span class="badge ${m.status === 'COMPLETED' ? 'badge--success' : m.status === 'IN_PROGRESS' ? 'badge--info' : 'badge--warning'}">${STATUS_LABELS[m.status] || m.status}</span></td>
+                      </tr>`;
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            </article>
+          </section>
+        ` : ''}
+
+        ${activeTab === 'missions' ? html`
+          <section class="panel">
+            <div class="panel-head">
+              <div>
+                <p class="eyebrow">Gestion</p>
+                <h3>Toutes les missions</h3>
+                <p class="field-note">${missions.length} missions au total</p>
+              </div>
+            </div>
+            <div class="table-wrapper">
+              <table>
+                <thead><tr><th>Destination</th><th>Description</th><th>Client</th><th>Téléphone</th><th>Date prévue</th><th>Statut</th><th>Actions</th></tr></thead>
+                <tbody>
+                  ${missions.map(function(m) {
+                    return html`<tr key=${m.id}>
+                      <td>${m.destination || '—'}</td>
+                      <td>${m.description || '—'}</td>
+                      <td>${m.customerName || '—'}</td>
+                      <td>${m.customerPhone || '—'}</td>
+                      <td>${m.scheduledDate ? new Date(m.scheduledDate).toLocaleDateString('fr-FR') : '—'}</td>
+                      <td><span class="badge ${m.status === 'COMPLETED' ? 'badge--success' : m.status === 'IN_PROGRESS' ? 'badge--info' : 'badge--warning'}">${STATUS_LABELS[m.status] || m.status}</span></td>
+                      <td>
+                        <div class="button-stack" style=${{ display: 'flex', gap: '6px' }}>
+                          ${m.status === 'PENDING' || m.status === 'ASSIGNED' ? html`<button class="ghost-button" onClick=${function() { startMission(m.id); }}>▶ Démarrer</button>` : ''}
+                          ${m.status === 'IN_PROGRESS' ? html`<button class="ghost-button" onClick=${function() { completeMission(m.id); }}>✓ Terminer</button>` : ''}
+                        </div>
+                      </td>
+                    </tr>`;
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </section>
+        ` : ''}
+
+        ${activeTab === 'conducteurs' ? html`
+          <section class="panel">
+            <div class="panel-head">
+              <div>
+                <p class="eyebrow">Équipe</p>
+                <h3>Conducteurs</h3>
+                <p class="field-note">${drivers.length} conducteurs - ${activeDrivers} actifs</p>
+              </div>
+            </div>
+            <div class="table-wrapper">
+              <table>
+                <thead><tr><th>Nom</th><th>Email</th><th>Téléphone</th><th>Statut</th></tr></thead>
+                <tbody>
+                  ${drivers.map(function(d) {
+                    return html`<tr key=${d.id}>
+                      <td>${d.fullName || d.name || '—'}</td>
+                      <td>${d.email || '—'}</td>
+                      <td>${d.phone || '—'}</td>
+                      <td><span class="badge ${d.status === 'ACTIVE' || d.status === 'Actif' ? 'badge--success' : 'badge--neutral'}">${d.status === 'ACTIVE' ? 'Actif' : d.status || 'Actif'}</span></td>
+                    </tr>`;
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </section>
+        ` : ''}
+
+        ${activeTab === 'véhicules' ? html`
+          <section class="panel">
+            <div class="panel-head">
+              <div>
+                <p class="eyebrow">Flotte</p>
+                <h3>Véhicules</h3>
+                <p class="field-note">${vehicles.length} véhicules - ${activeVehicles} actifs</p>
+              </div>
+            </div>
+            <div class="table-wrapper">
+              <table>
+                <thead><tr><th>Immatriculation</th><th>Marque</th><th>Modèle</th><th>Statut</th></tr></thead>
+                <tbody>
+                  ${vehicles.map(function(v) {
+                    return html`<tr key=${v.id}>
+                      <td>${v.licensePlate || '—'}</td>
+                      <td>${v.brand || '—'}</td>
+                      <td>${v.model || '—'}</td>
+                      <td><span class="badge ${v.status === 'ACTIVE' ? 'badge--success' : v.status === 'MAINTENANCE' ? 'badge--warning' : 'badge--neutral'}">${v.status === 'ACTIVE' ? 'Actif' : v.status === 'MAINTENANCE' ? 'Maintenance' : v.status || 'Actif'}</span></td>
+                    </tr>`;
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </section>
+        ` : ''}
+
+        ${activeTab === 'incidents' ? html`
+          <section class="panel">
+            <div class="panel-head">
+              <div>
+                <p class="eyebrow">Suivi</p>
+                <h3>Incidents signalés par les chauffeurs</h3>
+                <p class="field-note">${incidents.length} incidents - ${openIncidents} ouverts</p>
+              </div>
+            </div>
+            <div class="table-wrapper">
+              <table>
+                <thead><tr><th>Titre</th><th>Type</th><th>Signalé par</th><th>Véhicule</th><th>Localisation</th><th>Date</th><th>Statut</th></tr></thead>
+                <tbody>
+                  ${incidents.map(function(inc) {
+                    return html`<tr key=${inc.id}>
+                      <td><strong>${inc.title || '—'}</strong><br/><span class="field-note">${inc.description || ''}</span></td>
+                      <td><span class="badge badge--neutral">${inc.type || '—'}</span></td>
+                      <td>${inc.reportedBy || '—'}</td>
+                      <td>${inc.vehiclePlate || '—'}</td>
+                      <td>${inc.location || '—'}</td>
+                      <td>${inc.reportDate ? new Date(inc.reportDate).toLocaleDateString('fr-FR') : '—'}</td>
+                      <td><span class="badge ${inc.status === 'RESOLVED' ? 'badge--success' : 'badge--danger'}">${inc.status === 'RESOLVED' ? 'Résolu' : 'Ouvert'}</span></td>
+                    </tr>`;
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </section>
+        ` : ''}
+
+        ${activeTab === 'carte' ? html`
+          <section class="admin-card">
             <header>
               <div>
-                <p class="eyebrow">Alertes</p>
-                <h3>Répartition</h3>
+                <p class="eyebrow">Géolocalisation</p>
+                <h3>Carte des missions</h3>
               </div>
             </header>
-            ${ChartBars({ data: series.alertBreakdown })}
-          </article>
-          <article class="admin-card">
-            <header>
-              <div>
-                <p class="eyebrow">Missions</p>
-                <h3>États en cours</h3>
-              </div>
-            </header>
-            ${ChartBars({ data: series.missionBreakdown })}
-          </article>
-        </section>
-
-        <section id="section-alerts" class="panel section-block">
-          <div class="panel-head">
-            <div>
-              <p class="eyebrow">Alertes</p>
-              <h3>Suivi prioritaire</h3>
+            <div ref=${mapRef} style=${{ height: '500px', borderRadius: 'var(--radius-md)', border: '1px solid var(--border)', marginTop: '1rem' }}></div>
+            <div style=${{ display: 'flex', gap: '1.5rem', marginTop: '1rem', flexWrap: 'wrap' }}>
+              <span class="badge badge--info">🔵 Position actuelle</span>
+              <span class="badge badge--success">🟢 En cours</span>
+              <span class="badge badge--warning">🟡 En attente</span>
+              <span class="badge badge--neutral">🟣 Terminée</span>
             </div>
-            <div class="panel-actions">
-              <select class="form-select" value=${filters.severity} onChange=${(e) => setFilters({ ...filters, severity: e.target.value })}>
-                ${['Toutes', 'Critique', 'Élevée', 'Moyenne'].map((value) => html`<option value=${value}>${value}</option>`)}
-              </select>
-              <select class="form-select" value=${filters.status} onChange=${(e) => setFilters({ ...filters, status: e.target.value })}>
-                ${['Tous', 'Ouverte', 'En cours', 'Clôturée'].map((value) => html`<option value=${value}>${value}</option>`)}
-              </select>
-              <input class="form-control" placeholder="Rechercher" value=${filters.search} onInput=${(e) => setFilters({ ...filters, search: e.target.value })} />
-            </div>
-          </div>
-          <div class="table-wrapper">
-            <table>
-              <thead><tr><th>Priorité</th><th>Véhicule</th><th>Type</th><th>Date</th><th>Statut</th></tr></thead>
-              <tbody>
-                ${filteredAlerts.map(
-                  (alert) => html`<tr>
-                    <td><span class="badge ${alert.priority === 'Critique' ? 'badge--danger' : alert.priority === 'Élevée' ? 'badge--warning' : 'badge--neutral'}">${alert.priority}</span></td>
-                    <td>${alert.vehicle}</td>
-                    <td>${alert.type}</td>
-                    <td>${alert.date}</td>
-                    <td>
-                      ${alert.status}
-                      <button class="ghost-button" type="button" onClick=${() => markHandled(alert.id)}>Marquer traitée</button>
-                    </td>
-                  </tr>`
-                )}
-              </tbody>
-            </table>
-          </div>
-        </section>
-
-        <section id="section-missions" class="panel section-block">
-          <div class="panel-head">
-            <div>
-              <p class="eyebrow">Missions</p>
-              <h3>Routes en cours</h3>
-            </div>
-            <div class="panel-actions">
-              <button class="ghost-button" type="button" onClick=${() => setFilters({ ...filters, search: '' })}>Réinitialiser la recherche</button>
-            </div>
-          </div>
-          <div class="table-wrapper">
-            <table>
-              <thead><tr><th>Conducteur</th><th>Itinéraire</th><th>Statut</th><th>Prochain arrêt</th><th>ETA</th></tr></thead>
-              <tbody>
-                ${filteredMissions.map(
-                  (mission) => html`<tr>
-                    <td>${mission.driver}</td>
-                    <td>${mission.route}</td>
-                    <td><span class="badge ${mission.status === 'En cours' ? 'badge--success' : 'badge--neutral'}">${mission.status}</span></td>
-                    <td>${mission.nextStop}</td>
-                    <td>${mission.etaMinutes} min</td>
-                  </tr>`
-                )}
-              </tbody>
-            </table>
-          </div>
-        </section>
-
-        <section id="section-fleet" class="panel section-block">
-          <div class="panel-head">
-            <div>
-              <p class="eyebrow">Véhicules</p>
-              <h3>Disponibilité</h3>
-            </div>
-          </div>
-          <div class="table-wrapper">
-            <table>
-              <thead><tr><th>Véhicule</th><th>Ville</th><th>Statut</th><th>Kilométrage</th></tr></thead>
-              <tbody>
-                ${tables.vehicles.map(
-                  (vehicle) => html`<tr>
-                    <td>${vehicle.name}</td>
-                    <td>${vehicle.city}</td>
-                    <td><span class="badge ${vehicle.status === 'En ligne' ? 'badge--success' : 'badge--neutral'}">${vehicle.status}</span></td>
-                    <td>${vehicle.mileage.toLocaleString('fr-FR')} km</td>
-                  </tr>`
-                )}
-              </tbody>
-            </table>
-          </div>
-        </section>
-
-        <section id="section-drivers" class="panel section-block">
-          <div class="panel-head">
-            <div>
-              <p class="eyebrow">Conducteurs</p>
-              <h3>Présence et statut</h3>
-            </div>
-          </div>
-          <div class="table-wrapper">
-            <table>
-              <thead><tr><th>Conducteur</th><th>Créneau</th><th>Statut</th><th>Dernier événement</th></tr></thead>
-              <tbody>
-                ${tables.drivers.map(
-                  (driver) => html`<tr>
-                    <td>${driver.name}</td>
-                    <td>${driver.shift}</td>
-                    <td><span class="badge ${driver.status === 'En service' ? 'badge--success' : 'badge--neutral'}">${driver.status}</span></td>
-                    <td>${driver.lastEvent}</td>
-                  </tr>`
-                )}
-              </tbody>
-            </table>
-          </div>
-        </section>
-
-        <section id="section-invoices" class="panel section-block">
-          <div class="panel-head">
-            <div>
-              <p class="eyebrow">Factures</p>
-              <h3>Flux de facturation (MAD)</h3>
-            </div>
-          </div>
-          <div class="table-wrapper">
-            <table>
-              <thead><tr><th>Référence</th><th>Client</th><th>Montant</th><th>Statut</th><th>Échéance</th></tr></thead>
-              <tbody>
-                ${invoices.map(
-                  (invoice) => html`<tr>
-                    <td>${invoice.reference}</td>
-                    <td>${invoice.client}</td>
-                    <td>${formatMad(invoice.amount)}</td>
-                    <td><span class="badge ${invoice.status === 'Payée' ? 'badge--success' : invoice.status === 'En retard' ? 'badge--danger' : 'badge--warning'}">${invoice.status}</span></td>
-                    <td>${invoice.dueDate}</td>
-                  </tr>`
-                )}
-              </tbody>
-            </table>
-          </div>
-        </section>
-
-        <section id="section-settings" class="panel section-block">
-          <div class="panel-head">
-            <div>
-              <p class="eyebrow">Actions rapides</p>
-              <h3>Commandes Exploitant</h3>
-            </div>
-          </div>
-          <div class="button-stack" style=${{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
-            <button class="primary-button" type="button" onClick=${() => setStatus('Mission créée (simulation).')}>Créer une mission</button>
-            <button class="ghost-button" type="button" onClick=${() => setStatus('Contact conducteur simulé.')}>Contacter un conducteur</button>
-            <button class="ghost-button" type="button" onClick=${() => setStatus('Alerte marquée traitée (simulation).')}>Marquer une alerte traitée</button>
-          </div>
-        </section>
+          </section>
+        ` : ''}
       </section>
     </main>
   `;
