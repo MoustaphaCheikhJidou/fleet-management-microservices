@@ -4,9 +4,7 @@ import {
   getAdminDataset,
   recomputeSnapshotWithAlerts,
   buildEmptySnapshot,
-  inviteCarrier,
-  inviteDriver,
-  inviteAdmin,
+  createUser,
 } from '../services/adminDataService.js';
 import { getEmail, getUserLabel, logout } from '../services/session.js';
 import { useNavigate } from '../router.js';
@@ -157,9 +155,9 @@ export function AdminDashboardPage() {
     []
   );
   const [filters, setFilters] = React.useState(initialFilters);
-  const [newCarrier, setNewCarrier] = React.useState({ name: '', city: '', fleetSize: '', contactEmail: '', password: '' });
-  const [newDriver, setNewDriver] = React.useState({ name: '', email: '', carrierId: '', phone: '', password: '' });
-  const [newAdmin, setNewAdmin] = React.useState({ name: '', email: '' });
+  const [newCarrier, setNewCarrier] = React.useState({ name: '', city: '', fleetSize: '', contactEmail: '', password: '', confirmPassword: '', company: '', phone: '' });
+  const [newDriver, setNewDriver] = React.useState({ name: '', email: '', carrierId: '', phone: '', password: '', confirmPassword: '', vehicle: '' });
+  const [newAdmin, setNewAdmin] = React.useState({ name: '', email: '', password: '', confirmPassword: '' });
   const [newVehicle, setNewVehicle] = React.useState({ licensePlate: '', brand: '', model: '', managerId: '' });
   const [vehicles, setVehicles] = React.useState([]);
 
@@ -325,35 +323,43 @@ export function AdminDashboardPage() {
       setActionMessage('Mot de passe requis (min 8 caractères).');
       return;
     }
+    if (newCarrier.password !== newCarrier.confirmPassword) {
+      setActionMessage('Les mots de passe ne correspondent pas.');
+      return;
+    }
     const fleetSizeValue = Number(newCarrier.fleetSize);
     if (Number.isNaN(fleetSizeValue) || fleetSizeValue < 0) {
       setActionMessage('Taille de flotte requise (0 ou plus).');
       return;
     }
-
-    safeFetch(ENDPOINTS.adminCreateUser, {
-      method: 'POST',
-      body: {
-        email: newCarrier.contactEmail,
-        password: newCarrier.password,
-        fullName: newCarrier.name || newCarrier.contactEmail,
-        role: 'CARRIER',
+    createUser({
+      email: newCarrier.contactEmail,
+      fullName: newCarrier.name || newCarrier.contactEmail,
+      role: 'CARRIER',
+      password: newCarrier.password,
+      metadata: {
         city: newCarrier.city,
+        company: newCarrier.company || newCarrier.name || newCarrier.contactEmail,
         fleetSize: fleetSizeValue,
+        phone: newCarrier.phone,
       },
     })
-      .then(() => {
-        setStatus('Exploitant créé.');
-        setActionMessage(`Compte ${newCarrier.contactEmail} créé avec succès. Connexion immédiate possible.`);
-        loadDataset({ preferLive: true });
+      .then((res) => {
+        if (res.ok) {
+          setStatus('Exploitant créé.');
+          setActionMessage(`Compte ${newCarrier.contactEmail} créé avec succès.`);
+          loadDataset({ preferLive: true });
+        } else {
+          setActionMessage(`Échec (HTTP ${res.status}): ${res.message}`);
+          setStatus('Création exploitant échouée.');
+        }
       })
       .catch((error) => {
-        console.debug('[admin] createCarrier failed', error);
-        setActionMessage(formatInviteError(error));
+        console.debug('[admin] createUser (carrier) failed', error);
+        setActionMessage('Erreur inattendue lors de la création de l’exploitant.');
         setStatus('Création exploitant échouée.');
       });
-
-    setNewCarrier({ name: '', city: '', fleetSize: '', contactEmail: '', password: '' });
+    setNewCarrier({ name: '', city: '', fleetSize: '', contactEmail: '', password: '', confirmPassword: '', company: '', phone: '' });
   }
 
   function handleAddDriver(event) {
@@ -374,29 +380,37 @@ export function AdminDashboardPage() {
       setActionMessage('Mot de passe requis (min 8 caractères).');
       return;
     }
-    safeFetch(ENDPOINTS.adminCreateUser, {
-      method: 'POST',
-      body: {
-        email: newDriver.email,
-        password: newDriver.password,
-        fullName: newDriver.name || newDriver.email,
-        role: 'DRIVER',
-        carrierId: Number(newDriver.carrierId),
+    if (newDriver.password !== newDriver.confirmPassword) {
+      setActionMessage('Les mots de passe ne correspondent pas.');
+      return;
+    }
+    createUser({
+      email: newDriver.email,
+      fullName: newDriver.name || newDriver.email,
+      role: 'DRIVER',
+      password: newDriver.password,
+      metadata: {
         phone: newDriver.phone,
+        vehicle: newDriver.vehicle,
+        carrierId: newDriver.carrierId,
       },
     })
-      .then(() => {
-        setStatus('Conducteur créé.');
-        setActionMessage(`Compte ${newDriver.email} créé avec succès. Connexion immédiate possible.`);
-        loadDataset({ preferLive: true });
+      .then((res) => {
+        if (res.ok) {
+          setStatus('Conducteur créé.');
+          setActionMessage(`Compte ${newDriver.email} créé avec succès.`);
+          loadDataset({ preferLive: true });
+        } else {
+          setActionMessage(`Échec (HTTP ${res.status}): ${res.message}`);
+          setStatus('Création conducteur échouée.');
+        }
       })
       .catch((error) => {
-        console.debug('[admin] createDriver failed', error);
-        setActionMessage(formatInviteError(error));
+        console.debug('[admin] createUser (driver) failed', error);
+        setActionMessage('Erreur inattendue lors de la création du conducteur.');
         setStatus('Création conducteur échouée.');
       });
-
-    setNewDriver({ name: '', email: '', carrierId: '', phone: '', password: '' });
+    setNewDriver({ name: '', email: '', carrierId: '', phone: '', password: '', confirmPassword: '', vehicle: '' });
   }
 
   function handleAddAdmin(event) {
@@ -405,18 +419,37 @@ export function AdminDashboardPage() {
       setActionMessage('Email administrateur requis et valide.');
       return;
     }
-    inviteAdmin({ email: newAdmin.email, fullName: newAdmin.name || newAdmin.email })
-      .then(() => {
-        setStatus('Invitation administrateur envoyée.');
-        setActionMessage(`Invitation envoyée à ${newAdmin.email}. Activation requise.`);
-        loadDataset({ preferLive: true });
+    if (!newAdmin.password || newAdmin.password.length < 8) {
+      setActionMessage('Mot de passe requis (min 8 caractères).');
+      return;
+    }
+    if (newAdmin.password !== newAdmin.confirmPassword) {
+      setActionMessage('Les mots de passe ne correspondent pas.');
+      return;
+    }
+    createUser({
+      email: newAdmin.email,
+      fullName: newAdmin.name || newAdmin.email,
+      role: 'ADMIN',
+      password: newAdmin.password,
+      metadata: {},
+    })
+      .then((res) => {
+        if (res.ok) {
+          setStatus('Compte administrateur créé.');
+          setActionMessage(`Compte créé: ${newAdmin.email}`);
+          loadDataset({ preferLive: true });
+        } else {
+          setActionMessage(`Échec (HTTP ${res.status}): ${res.message}`);
+          setStatus('Création administrateur échouée.');
+        }
       })
       .catch((error) => {
-        console.debug('[admin] inviteAdmin failed', error);
-        setActionMessage(formatInviteError(error));
-        setStatus('Invitation administrateur échouée.');
+        console.debug('[admin] createUser (admin) failed', error);
+        setActionMessage('Erreur inattendue lors de la création de l’administrateur.');
+        setStatus('Création administrateur échouée.');
       });
-    setNewAdmin({ name: '', email: '' });
+    setNewAdmin({ name: '', email: '', password: '', confirmPassword: '' });
   }
 
   function handleAddVehicle(event) {
@@ -686,7 +719,7 @@ export function AdminDashboardPage() {
           </div>
           <div class="table-wrapper">
             <table>
-              <thead><tr><th>Nom</th><th>Ville</th><th>Contact</th><th>Véhicules</th><th>Alertes</th><th>Statut</th><th>Actions</th></tr></thead>
+              <thead><tr><th>Nom</th><th>Ville</th><th>Contact</th><th>Véhicules</th><th>Alertes</th><th>Statut</th><th>Statut brut</th><th>Actions</th></tr></thead>
               <tbody>
                 ${filteredCarriers.length
                   ? filteredCarriers.map(
@@ -697,6 +730,7 @@ export function AdminDashboardPage() {
                         <td>${carrier.fleetSize}</td>
                         <td>${carrier.openAlerts}</td>
                         <td><span class="badge ${carrier.enabled ? 'badge--success' : 'badge--danger'}">${carrier.enabled ? 'Actif' : 'Désactivé'}</span></td>
+                        <td>${String(carrier.enabled)} / ${carrier.status}</td>
                         <td>
                           <div class="button-stack" style=${{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
                             <button class="ghost-button" type="button" onClick=${() => handleToggleEnabled(carrier.id, carrier.enabled)}>
@@ -706,7 +740,7 @@ export function AdminDashboardPage() {
                         </td>
                       </tr>`
                     )
-                  : emptyRow(7, 'Aucun exploitant pour le moment. Créez un exploitant pour démarrer.')}
+                  : emptyRow(8, 'Aucun exploitant pour le moment. Créez un exploitant pour démarrer.')}
               </tbody>
             </table>
           </div>
@@ -717,7 +751,10 @@ export function AdminDashboardPage() {
               <input data-testid="carrier-city" class="form-control" required placeholder="Ville" value=${newCarrier.city} onInput=${(e) => setNewCarrier({ ...newCarrier, city: e.target.value })} />
               <input data-testid="carrier-email" class="form-control" type="email" required placeholder="Email contact" value=${newCarrier.contactEmail} onInput=${(e) => setNewCarrier({ ...newCarrier, contactEmail: e.target.value })} />
               <input data-testid="carrier-password" class="form-control" type="password" required minLength="8" placeholder="Mot de passe (min 8 car.)" value=${newCarrier.password} onInput=${(e) => setNewCarrier({ ...newCarrier, password: e.target.value })} />
+              <input data-testid="carrier-confirmPassword" class="form-control" type="password" required minLength="8" placeholder="Confirmer le mot de passe" value=${newCarrier.confirmPassword} onInput=${(e) => setNewCarrier({ ...newCarrier, confirmPassword: e.target.value })} />
               <input data-testid="carrier-fleetSize" class="form-control" type="number" min="0" required placeholder="Taille de flotte (0 si inconnue)" value=${newCarrier.fleetSize} onInput=${(e) => setNewCarrier({ ...newCarrier, fleetSize: e.target.value })} />
+              <input data-testid="carrier-company" class="form-control" placeholder="Société (optionnel)" value=${newCarrier.company} onInput=${(e) => setNewCarrier({ ...newCarrier, company: e.target.value })} />
+              <input data-testid="carrier-phone" class="form-control" placeholder="Téléphone (optionnel)" value=${newCarrier.phone} onInput=${(e) => setNewCarrier({ ...newCarrier, phone: e.target.value })} />
             </div>
             <button data-testid="carrier-submit" class="primary-button" type="submit">Créer exploitant</button>
           </form>
@@ -740,7 +777,7 @@ export function AdminDashboardPage() {
           </div>
           <div class="table-wrapper">
             <table>
-              <thead><tr><th>Nom</th><th>Exploitant</th><th>Email</th><th>Téléphone</th><th>Véhicule</th><th>Statut</th><th>Actions</th></tr></thead>
+              <thead><tr><th>Nom</th><th>Exploitant</th><th>Email</th><th>Téléphone</th><th>Véhicule</th><th>Statut</th><th>Statut brut</th><th>Actions</th></tr></thead>
               <tbody>
                 ${filteredDrivers.length
                   ? filteredDrivers.map(
@@ -751,6 +788,7 @@ export function AdminDashboardPage() {
                         <td>${driver.phone || '—'}</td>
                         <td>${driver.vehicle || '—'}</td>
                         <td><span class="badge ${driver.enabled ? 'badge--success' : 'badge--danger'}">${driver.enabled ? 'Actif' : 'Désactivé'}</span></td>
+                        <td>${String(driver.enabled)} / ${driver.status}</td>
                         <td>
                           <div class="button-stack" style=${{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
                             <button class="ghost-button" type="button" onClick=${() => handleToggleEnabled(driver.id, driver.enabled)}>
@@ -760,7 +798,7 @@ export function AdminDashboardPage() {
                         </td>
                       </tr>`
                     )
-                  : emptyRow(7, 'Aucun conducteur pour le moment. Ajoutez-en un via le formulaire ci-dessous.')}
+                  : emptyRow(8, 'Aucun conducteur pour le moment. Ajoutez-en un via le formulaire ci-dessous.')}
               </tbody>
             </table>
           </div>
@@ -774,7 +812,9 @@ export function AdminDashboardPage() {
               </select>
               <input data-testid="driver-email" class="form-control" required type="email" placeholder="Email" value=${newDriver.email} onInput=${(e) => setNewDriver({ ...newDriver, email: e.target.value })} />
               <input data-testid="driver-password" class="form-control" type="password" required minLength="8" placeholder="Mot de passe (min 8 car.)" value=${newDriver.password} onInput=${(e) => setNewDriver({ ...newDriver, password: e.target.value })} />
-              <input data-testid="driver-phone" class="form-control" placeholder="Téléphone" value=${newDriver.phone} onInput=${(e) => setNewDriver({ ...newDriver, phone: e.target.value })} />
+              <input data-testid="driver-confirmPassword" class="form-control" type="password" required minLength="8" placeholder="Confirmer le mot de passe" value=${newDriver.confirmPassword} onInput=${(e) => setNewDriver({ ...newDriver, confirmPassword: e.target.value })} />
+              <input data-testid="driver-phone" class="form-control" placeholder="Téléphone (optionnel)" value=${newDriver.phone} onInput=${(e) => setNewDriver({ ...newDriver, phone: e.target.value })} />
+              <input data-testid="driver-vehicle" class="form-control" placeholder="Véhicule (optionnel)" value=${newDriver.vehicle} onInput=${(e) => setNewDriver({ ...newDriver, vehicle: e.target.value })} />
             </div>
             <button data-testid="driver-submit" class="primary-button" type="submit" disabled=${!(tables.carriers || []).length}>Créer conducteur</button>
               ${!(tables.carriers || []).length
@@ -837,7 +877,7 @@ export function AdminDashboardPage() {
           </div>
           <div class="table-wrapper">
             <table>
-              <thead><tr><th>Email</th><th>Profils</th><th>Statut</th><th>Actions</th></tr></thead>
+              <thead><tr><th>Email</th><th>Profils</th><th>Statut</th><th>Statut brut</th><th>Actions</th></tr></thead>
               <tbody>
                 ${users.length
                   ? users.map(
@@ -845,6 +885,7 @@ export function AdminDashboardPage() {
                         <td>${user.email}</td>
                         <td>${(user.profiles || []).join(', ')}</td>
                         <td><span class="badge ${user.enabled ? 'badge--success' : 'badge--danger'}">${user.enabled ? 'Actif' : 'Désactivé'}</span></td>
+                        <td>${String(user.enabled)} / ${user.status}</td>
                         <td>
                           <button class="ghost-button" type="button" onClick=${() => handleToggleEnabled(user.id, user.enabled)}>
                             ${user.enabled ? 'Désactiver' : 'Activer'}
@@ -852,7 +893,7 @@ export function AdminDashboardPage() {
                         </td>
                       </tr>`
                     )
-                  : emptyRow(4, 'Aucun utilisateur pour le moment. Les invitations créeront les comptes.')}
+                  : emptyRow(5, 'Aucun utilisateur pour le moment. Les invitations créeront les comptes.')}
               </tbody>
             </table>
           </div>
@@ -867,7 +908,7 @@ export function AdminDashboardPage() {
           </div>
           <div class="table-wrapper">
             <table>
-              <thead><tr><th>Email</th><th>Profils</th><th>Statut</th><th>Actions</th></tr></thead>
+              <thead><tr><th>Email</th><th>Profils</th><th>Statut</th><th>Statut brut</th><th>Actions</th></tr></thead>
               <tbody>
                 ${admins.length
                   ? admins.map(
@@ -875,6 +916,7 @@ export function AdminDashboardPage() {
                         <td>${admin.email}</td>
                         <td>${(admin.profiles || []).join(', ')}</td>
                         <td><span class="badge ${admin.enabled ? 'badge--success' : 'badge--danger'}">${admin.enabled ? 'Actif' : 'Désactivé'}</span></td>
+                        <td>${String(admin.enabled)} / ${admin.status}</td>
                         <td>
                           <button class="ghost-button" type="button" onClick=${() => handleToggleEnabled(admin.id, admin.enabled)}>
                             ${admin.enabled ? 'Désactiver' : 'Activer'}
@@ -882,17 +924,19 @@ export function AdminDashboardPage() {
                         </td>
                       </tr>`
                     )
-                  : emptyRow(4, 'Aucun administrateur supplémentaire. Invitez-en un si nécessaire.')}
+                  : emptyRow(5, 'Aucun administrateur supplémentaire. Invitez-en un si nécessaire.')}
               </tbody>
             </table>
           </div>
           <form class="admin-form" onSubmit=${handleAddAdmin}>
-            <h4>Inviter un administrateur</h4>
+            <h4>Créer un administrateur</h4>
             <div class="form-grid">
               <input data-testid="admin-name" class="form-control" placeholder="Nom" value=${newAdmin.name} onInput=${(e) => setNewAdmin({ ...newAdmin, name: e.target.value })} />
               <input data-testid="admin-email" class="form-control" type="email" required placeholder="Email" value=${newAdmin.email} onInput=${(e) => setNewAdmin({ ...newAdmin, email: e.target.value })} />
+              <input data-testid="admin-password" class="form-control" type="password" required minLength="8" placeholder="Mot de passe (min 8 caractères)" value=${newAdmin.password} onInput=${(e) => setNewAdmin({ ...newAdmin, password: e.target.value })} />
+              <input data-testid="admin-confirmPassword" class="form-control" type="password" required minLength="8" placeholder="Confirmer le mot de passe" value=${newAdmin.confirmPassword} onInput=${(e) => setNewAdmin({ ...newAdmin, confirmPassword: e.target.value })} />
             </div>
-            <button data-testid="admin-submit" class="primary-button" type="submit">Envoyer invitation admin</button>
+            <button data-testid="admin-submit" class="primary-button" type="submit">Créer administrateur</button>
           </form>
         </section>
       </section>

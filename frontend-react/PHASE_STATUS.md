@@ -1,3 +1,30 @@
+# PHASE_STATUS.md
+
+## Validation Commands
+```
+docker compose up -d --build gateway-service iam-service frontend-react-ui
+python3 frontend-react/scripts/scan_forbidden.py
+node frontend-react/scripts/prove_admin_create_admin_with_password.js
+node frontend-react/scripts/prove_admin_vehicle_refresh.js
+```
+
+## Proof Artifacts
+- `frontend-react/proofs/prove_admin_create_admin_with_password.png` (screenshot)
+- `frontend-react/proofs/prove_admin_create_admin_with_password_loggedin.png` (screenshot)
+- `frontend-react/proofs/prove_admin_create_admin_with_password.json` (result)
+- `frontend-react/proofs/prove_admin_vehicle_refresh.png` (screenshot)
+- `frontend-react/proofs/prove_admin_vehicle_refresh.json` (result)
+
+## Test Data
+- **Exploitant**: EL Moustapha JIDDOU, elmoustapha.cheikh.jiddou@gmail.com, Nouakchott, TestCo, fleetSize: 1, password: ChangeMe_123!
+- **Admin**: admin_test_01@example.com, Admin Test 01, password: ChangeMe_123!
+- **Véhicule**: plate: NKC-1234, model: Toyota, status: ACTIF
+
+## Expected
+- AdminDashboard crée Admin/Exploitant/Conducteur avec password
+- Vehicle add => refresh immédiat table+KPIs
+- Erreurs UI claires + logs
+- Proofs Playwright EXIT 0 + artifacts dans frontend-react/proofs
 PHASE 1 ✅
 PHASE 2 ✅ (auth same-origin OK)
 PHASE 3 ✅ (0 vocabulaire technique UI)

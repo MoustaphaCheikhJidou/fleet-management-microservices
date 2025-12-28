@@ -1,7 +1,8 @@
 import { API_BASE_URL, ENDPOINTS } from './config.js';
 import { getToken } from './session.js';
 
-const INVITE_ENDPOINT = '/v1/admin/users/invite';
+
+const CREATE_USER_ENDPOINT = '/api/v1/admin/users';
 
 function emptyTables() {
   return { carriers: [], drivers: [], alerts: [] };
@@ -265,58 +266,39 @@ export function recomputeSnapshotWithAlerts(snapshot, alerts) {
   }).snapshot;
 }
 
-async function postInvite(body) {
+
+/**
+ * Unified user creation for admin, carrier, driver.
+ * @param {Object} param0
+ * @returns {Promise<{ok: boolean, data?: any, status?: number, message?: string}>}
+ */
+export async function createUser({ email, fullName, role, password, metadata }) {
   const headers = new Headers({ 'Content-Type': 'application/json' });
   const token = getToken();
   if (token) headers.set('Authorization', `Bearer ${token}`);
-  const res = await fetch(`${API_BASE_URL}${INVITE_ENDPOINT}`, {
-    method: 'POST',
-    headers,
-    body: JSON.stringify(body),
-  });
-  if (!res.ok) {
-    let payload = null;
-    try {
-      payload = await res.text();
-    } catch (_) {
-      payload = null;
+  let body = { email, fullName, role, password, metadata };
+  // Remove undefined fields
+  Object.keys(body).forEach(k => body[k] === undefined && delete body[k]);
+  try {
+    const res = await fetch(`${API_BASE_URL}${CREATE_USER_ENDPOINT}`, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify(body),
+    });
+    let text = await res.text();
+    let data = null;
+    try { data = text ? JSON.parse(text) : null; } catch { data = text; }
+    if (!res.ok) {
+      const message = (data && data.message) ? data.message : (typeof data === 'string' ? data : 'Erreur inconnue');
+      return { ok: false, status: res.status, message };
     }
-    console.debug('[adminDataService] invite failed', res.status, payload);
-    const error = new Error('INVITE_FAILED');
-    error.status = res.status;
-    error.payload = payload;
-    throw error;
+    return { ok: true, data };
+  } catch (error) {
+    return { ok: false, status: 0, message: error?.message || 'Erreur réseau' };
   }
-  return { status: res.status };
 }
 
-export async function inviteCarrier({ email, fullName, city, fleetSize }) {
-  return postInvite({
-    email,
-    fullName,
-    role: 'CARRIER',
-    metadata: {
-      company: fullName || email,
-      city,
-      fleetSize: Number(fleetSize) || 0,
-    },
-  });
-}
 
-export async function inviteDriver({ email, fullName, carrierId, phone }) {
-  return postInvite({
-    email,
-    fullName,
-    role: 'DRIVER',
-    metadata: {
-      phone,
-      company: carrierId ? String(carrierId) : undefined,
-    },
-  });
-}
-
-export async function inviteAdmin({ email, fullName }) {
-  return postInvite({ email, fullName, role: 'ADMIN' });
-}
+// All user creation should use createUser({ ... })
 
 export { buildEmptySnapshot };
