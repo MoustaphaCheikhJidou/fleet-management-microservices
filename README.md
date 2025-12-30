@@ -39,12 +39,7 @@ docker compose down
 | issues-service | 8085 | /actuator/health |
 | frontend-react-ui (nginx) | 80 (interne) | — |
 | mailhog | 8025 | — |
-
-## Comptes de test
-Superadmin (seed)
-- email: superadmin@example.com
-- password: ChangeMe_Admin!123
-
+\
 ## Auth / Token JWT (ADMIN)
 TOKEN="$(curl -s -X POST http://localhost:8081/api/v1/auth/signin -H "Content-Type: application/json" -d '{"email":"superadmin@example.com","password":"ChangeMe_Admin!123"}' | python3 -c 'import sys,json; print(json.load(sys.stdin)["token"])')"
 echo "TOKEN_LEN=${#TOKEN}"
