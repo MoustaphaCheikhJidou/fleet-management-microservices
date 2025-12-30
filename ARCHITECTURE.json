@@ -1,0 +1,151 @@
+{
+  "services": [
+    {
+      "name": "config-service",
+      "path": "config-service",
+      "ports": [8888],
+      "health": "/actuator/health",
+      "config_files": ["src/main/resources/application.yml"],
+      "docker_image": "mxuriciocm/fleet-management-microservices-config-service:latest",
+      "build": "Dockerfile",
+      "entrypoint": "com.config.service.ConfigServiceApplication"
+    },
+    {
+      "name": "eureka-service",
+      "path": "eureka-service",
+      "ports": [8761],
+      "health": "/actuator/health",
+      "config_files": ["src/main/resources/application.yml"],
+      "docker_image": "mxuriciocm/fleet-management-microservices-eureka-service:latest",
+      "build": "Dockerfile",
+      "entrypoint": "com.eureka.service.EurekaServiceApplication"
+    },
+    {
+      "name": "gateway-service",
+      "path": "gateway-service",
+      "ports": [8080],
+      "health": "/actuator/health",
+      "config_files": ["src/main/resources/application.yml"],
+      "docker_image": "mxuriciocm/fleet-management-microservices-gateway-service:latest",
+      "build": "Dockerfile",
+      "entrypoint": "com.gateway.service.GatewayServiceApplication"
+    },
+    {
+      "name": "iam-service",
+      "path": "iam-service",
+      "ports": [8081],
+      "health": "/actuator/health",
+      "config_files": ["src/main/resources/application.yml"],
+      "docker_image": "mxuriciocm/fleet-management-microservices-iam-service:latest",
+      "build": "Dockerfile",
+      "entrypoint": "com.iam.service.IamServiceApplication"
+    },
+    {
+      "name": "profiles-service",
+      "path": "profiles-service",
+      "ports": [8082],
+      "health": "/actuator/health",
+      "config_files": ["src/main/resources/application.yml"],
+      "docker_image": "mxuriciocm/fleet-management-microservices-profiles-service:latest",
+      "build": "Dockerfile",
+      "entrypoint": "com.profiles.service.ProfilesServiceApplication"
+    },
+    {
+      "name": "vehicles-service",
+      "path": "vehicles-service",
+      "ports": [8083],
+      "health": "/actuator/health",
+      "config_files": ["src/main/resources/application.yml"],
+      "docker_image": "mxuriciocm/fleet-management-microservices-vehicles-service:latest",
+      "build": "Dockerfile",
+      "entrypoint": "com.vehicles.service.VehiclesServiceApplication"
+    },
+    {
+      "name": "shipments-service",
+      "path": "shipments-service",
+      "ports": [8084],
+      "health": "/actuator/health",
+      "config_files": ["src/main/resources/application.yml"],
+      "docker_image": "mxuriciocm/fleet-management-microservices-shipments-service:latest",
+      "build": "Dockerfile",
+      "entrypoint": "com.shipments.service.ShipmentsServiceApplication"
+    },
+    {
+      "name": "issues-service",
+      "path": "issues-service",
+      "ports": [8085],
+      "health": "/actuator/health",
+      "config_files": ["src/main/resources/application.yml"],
+      "docker_image": "mxuriciocm/fleet-management-microservices-issues-service:latest",
+      "build": "Dockerfile",
+      "entrypoint": "com.issues.service.IssuesServiceApplication"
+    }
+  ],
+  "frontends": [
+    {
+      "name": "frontend-react-ui",
+      "path": "frontend-react",
+      "ports": [80],
+      "config_files": ["nginx.conf", "package.json"],
+      "docker_image": "mxuriciocm/fleet-management-microservices-frontend-react-ui:latest",
+      "build": "Dockerfile",
+      "entrypoint": "nginx -g 'daemon off;'"
+    }
+  ],
+  "scripts": {
+    "smokes": [
+      "scripts/db_audit.sh",
+      "scripts/diagnose_login.sh",
+      "scripts/iam_invite_smoke.sh"
+    ],
+    "playwright": [
+      "frontend-react/scripts/_mailhog.js",
+      "frontend-react/scripts/prove_admin_charts_never_disappear.js",
+      "frontend-react/scripts/prove_admin_charts_visible.js",
+      "frontend-react/scripts/prove_admin_clean_create_flows.js",
+      "frontend-react/scripts/prove_admin_create_admin_with_password.js",
+      "frontend-react/scripts/prove_admin_filters_actions.js",
+      "frontend-react/scripts/prove_admin_guard_no_session.js",
+      "frontend-react/scripts/prove_admin_guard_non_admin.js",
+      "frontend-react/scripts/prove_admin_invite_driver.js",
+      "frontend-react/scripts/prove_admin_invite_operator.js",
+      "frontend-react/scripts/prove_admin_live_fallback.js",
+      "frontend-react/scripts/prove_admin_page_loads.js",
+      "frontend-react/scripts/prove_admin_route_loads.js",
+      "frontend-react/scripts/prove_admin_vehicle_refresh.js",
+      "frontend-react/scripts/prove_driver_account_flow.js",
+      "frontend-react/scripts/prove_driver_dashboard.js",
+      "frontend-react/scripts/prove_driver_live_fallback.js",
+      "frontend-react/scripts/prove_driver_set_password.js",
+      "frontend-react/scripts/prove_home_hero.js",
+      "frontend-react/scripts/prove_home_nav.js",
+      "frontend-react/scripts/prove_login_flow.js",
+      "frontend-react/scripts/prove_login_styles.js",
+      "frontend-react/scripts/prove_no_signup_visible.js",
+      "frontend-react/scripts/prove_operator_account_flow.js",
+      "frontend-react/scripts/prove_operator_dashboard.js",
+      "frontend-react/scripts/prove_operator_live_fallback.js",
+      "frontend-react/scripts/prove_operator_set_password.js",
+      "frontend-react/scripts/prove_styles.js",
+      "frontend-react/scripts/test_mailhog_extractor.js"
+    ],
+    "scans": [
+      "frontend-react/scripts/scan_forbidden.py"
+    ]
+  },
+  "docs": [
+    "README.md",
+    "frontend-react/README.md"
+  ],
+  "entrypoints": {
+    "config-service": "com.config.service.ConfigServiceApplication",
+    "eureka-service": "com.eureka.service.EurekaServiceApplication",
+    "gateway-service": "com.gateway.service.GatewayServiceApplication",
+    "iam-service": "com.iam.service.IamServiceApplication",
+    "profiles-service": "com.profiles.service.ProfilesServiceApplication",
+    "vehicles-service": "com.vehicles.service.VehiclesServiceApplication",
+    "shipments-service": "com.shipments.service.ShipmentsServiceApplication",
+    "issues-service": "com.issues.service.IssuesServiceApplication",
+    "frontend-react": "main.js"
+  }
+}
